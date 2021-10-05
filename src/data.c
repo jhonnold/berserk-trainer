@@ -15,7 +15,7 @@ void LoadEntries(char* path, DataSet* data) {
 
   int p = 0;
   char in[128];
-  while (p < 10000000 && fgets(in, 128, fp)) {
+  while (fgets(in, 128, fp)) {
     LoadDataEntry(in, &data->entries[p++]);
 
     if (!(p & 4095))

@@ -7,7 +7,7 @@
 #include "board.h"
 #include "nn.h"
 
-const int NETWORK_MAGIC = 'B' | 'C' << 8 | 1 << 16 | 0 << 24;
+const int NETWORK_MAGIC = 'B' | 'Z' << 8 | 1 << 16 | 0 << 24;
 const int NETWORK_ID = 0;
 const int INPUT_SIZE = N_FEATURES;
 const int OUTPUT_SIZE = N_OUTPUT;
@@ -25,12 +25,14 @@ void NNPredict(NN* nn, Board board, NNActivations* results) {
     else
       break;
 
-  // Apply second layer
-  memcpy(results->outputActivations, nn->outputBiases, sizeof(float) * N_OUTPUT);
+  for (int i = 0; i < N_HIDDEN; i++)
+    results->hiddenActivations[i] = fmax(0.0f, results->hiddenActivations[i]);
 
-  for (int i = 0; i < N_OUTPUT; i++)
-    for (int j = 0; j < N_HIDDEN; j++)
-      results->outputActivations[i] += nn->hiddenWeights[j * N_OUTPUT + i] * fmax(0.0f, results->hiddenActivations[i]);
+  // Apply second layer
+  results->outputActivations[0] = nn->outputBiases[0];
+
+  for (int i = 0; i < N_HIDDEN; i++)
+    results->outputActivations[0] += nn->hiddenWeights[i] * results->hiddenActivations[i];
 }
 
 NN* LoadNN(char* path) {
