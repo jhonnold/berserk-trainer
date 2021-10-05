@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "board.h"
 #include "data.h"
@@ -42,4 +43,16 @@ void LoadDataEntry(char* buffer, DataEntry* result) {
 
   int eval = atoi(strstr(buffer, "] ") + 2);
   result->eval = Sigmoid(eval);
+}
+
+void ShuffleData(DataSet* data) {
+  srand(time(NULL));
+  DataEntry temp;
+
+  for (int i = 0; i < data->n; i++) {
+    int j = rand() % data->n;
+    temp = data->entries[i];
+    data->entries[i] = data->entries[j];
+    data->entries[j] = temp;
+  }
 }

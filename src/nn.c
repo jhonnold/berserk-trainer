@@ -51,7 +51,12 @@ NN* LoadNN(char* path) {
   }
 
   // Skip past the topology as we only support one
-  fread(NULL, 4, 5, fp);
+  int temp;
+  fread(&temp, 4, 1, fp);
+  fread(&temp, 4, 1, fp);
+  fread(&temp, 4, 1, fp);
+  fread(&temp, 4, 1, fp);
+  fread(&temp, 4, 1, fp);
 
   NN* nn = malloc(sizeof(NN));
 

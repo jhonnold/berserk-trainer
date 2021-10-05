@@ -4,7 +4,7 @@
 #include "data.h"
 #include "nn.h"
 
-#define ALPHA 0.001
+#define ALPHA 0.01
 #define BETA1 0.9f
 #define BETA2 0.999f
 #define EPSILON 1e-8f

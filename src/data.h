@@ -15,5 +15,6 @@ typedef struct {
 
 void LoadEntries(char* path, DataSet* data);
 void LoadDataEntry(char* buffer, DataEntry* result);
+void ShuffleData(DataSet* data);
 
 #endif

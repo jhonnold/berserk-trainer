@@ -12,7 +12,7 @@
 #include "util.h"
 
 #define THREADS 24
-#define BATCH_SIZE 16384
+#define BATCH_SIZE 65536
 
 int main(int argc, char** argv) {
   int c;
@@ -61,6 +61,9 @@ int main(int argc, char** argv) {
 
   for (int epoch = 1; epoch <= 10000; epoch++) {
     long epochStart = GetTimeMS();
+    
+    printf("Shuffling...\r");
+    ShuffleData(data);
 
     for (int b = 0; b < data->n / BATCH_SIZE; b++) {
       Train(b, data, nn, gradients);
@@ -112,6 +115,8 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g) {
   int chunkSize = BATCH_SIZE / THREADS;
 
   for (int t = 0; t < THREADS; t++) {
+    ClearGradients(&gradients[t]);
+
     jobs[t].start = batch * BATCH_SIZE + t * chunkSize;
     jobs[t].n = chunkSize;
     jobs[t].data = data;
