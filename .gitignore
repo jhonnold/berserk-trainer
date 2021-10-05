@@ -56,3 +56,4 @@ berserk
 dist
 
 *.log
+*.nn
