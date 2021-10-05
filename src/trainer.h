@@ -4,7 +4,10 @@
 #include "data.h"
 #include "nn.h"
 
-#define ALPHA 0.01
+#define THREADS 24
+#define BATCH_SIZE 16384
+
+#define ALPHA 0.01f
 #define BETA1 0.9f
 #define BETA2 0.999f
 #define EPSILON 1e-8f
@@ -29,18 +32,27 @@ typedef struct {
 
 typedef struct {
   int start, n;
+  NNActivations activations;
   DataSet* data;
   NN* nn;
   NNGradients* gradients;
 } UpdateGradientsJob;
 
+typedef struct {
+  int start, n;
+  float error;
+  DataSet* data;
+  NN* nn;
+} CalculateErrorJob;
+
 float Error(float result, DataEntry* entry);
 float ErrorGradient(float result, DataEntry* entry);
 float TotalError(DataSet* data, NN* nn);
+void* CalculateError(void* arg);
 void Train(int batch, DataSet* data, NN* nn, NNGradients* g);
-void ClearGradients(NNGradients* gradients);
 void* CalculateGradients(void* arg);
 void UpdateNetwork(NN* nn, NNGradients* g);
 void UpdateAndApplyGradient(float* v, Gradient* grad);
+void ClearGradients(NNGradients* gradients);
 
 #endif

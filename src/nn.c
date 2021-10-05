@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+
 
 #include "bits.h"
 #include "board.h"
@@ -71,19 +73,25 @@ NN* LoadNN(char* path) {
 }
 
 NN* LoadRandomNN() {
+  srand(time(NULL));
+
   NN* nn = malloc(sizeof(NN));
 
+  float max = sqrtf(2.0f / (N_FEATURES * N_HIDDEN));
   for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
-    nn->featureWeights[i] = (float)rand() / RAND_MAX / 2;
+    nn->featureWeights[i] = rand() * max / RAND_MAX;
 
+  max = sqrtf(2.0f / N_HIDDEN);
   for (int i = 0; i < N_HIDDEN; i++)
-    nn->hiddenBiases[i] = (float)rand() / RAND_MAX / 2;
+    nn->hiddenBiases[i] = rand() * max / RAND_MAX;
 
-  for (int i = 0; i < N_HIDDEN * N_OUTPUT; i++)
-    nn->hiddenWeights[i] = (float)rand() / RAND_MAX / 2;
+  max = sqrtf(2.0f / N_HIDDEN);
+  for (int i = 0; i < N_HIDDEN; i++)
+    nn->hiddenWeights[i] = rand() * max / RAND_MAX;
 
+  max = sqrtf(2.0f / N_OUTPUT);
   for (int i = 0; i < N_OUTPUT; i++)
-    nn->outputBiases[i] = (float)rand() / RAND_MAX / 2;
+    nn->outputBiases[i] = rand() * max / RAND_MAX;
 
   return nn;
 }

@@ -19,7 +19,7 @@ void LoadEntries(char* path, DataSet* data) {
   while (fgets(in, 128, fp)) {
     LoadDataEntry(in, &data->entries[p++]);
 
-    if (!(p & 4095))
+    if (p % 16384 == 0)
       printf("\rLoaded positions: [%9d]", p);
   }
 

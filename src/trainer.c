@@ -11,9 +11,6 @@
 #include "trainer.h"
 #include "util.h"
 
-#define THREADS 24
-#define BATCH_SIZE 65536
-
 int main(int argc, char** argv) {
   int c;
 
@@ -57,24 +54,27 @@ int main(int argc, char** argv) {
   NNGradients* gradients = malloc(sizeof(NNGradients));
   ClearGradients(gradients);
 
-  float error = 0.0f;
+  float error = TotalError(data, nn);
+  printf("Starting Error: [%1.8f]\n", error);
 
   for (int epoch = 1; epoch <= 10000; epoch++) {
     long epochStart = GetTimeMS();
-    
+
     printf("Shuffling...\r");
     ShuffleData(data);
 
-    for (int b = 0; b < data->n / BATCH_SIZE; b++) {
+    int batches = data->n / BATCH_SIZE;
+    for (int b = 0; b < batches; b++) {
       Train(b, data, nn, gradients);
       UpdateNetwork(nn, gradients);
-      printf("Batch: [#%4d]\r", b + 1);
+
+      printf("Batch: [#%5d]\r", b + 1);
     }
 
     float newError = TotalError(data, nn);
 
     long now = GetTimeMS();
-    printf("Epoch: [#%4d], Error: [%1.8f], Delta: [%+1.8f], Speed: [%9.0f pos/s]\n", epoch, newError, error - newError,
+    printf("Epoch: [#%5d], Error: [%1.8f], Delta: [%+1.8f], Speed: [%9.0f pos/s]\n", epoch, newError, error - newError,
            1000.0 * data->n / (now - epochStart));
 
     error = newError;
@@ -92,19 +92,45 @@ float Error(float result, DataEntry* entry) {
 float ErrorGradient(float result, DataEntry* entry) { return (result - entry->wdl) + (result - entry->eval); }
 
 float TotalError(DataSet* data, NN* nn) {
-  float e = 0.0f;
+  pthread_t threads[THREADS];
+  CalculateErrorJob jobs[THREADS];
 
-#pragma omp parallel for schedule(static) num_threads(THREADS) reduction(+ : e)
-  for (int i = 0; i < data->n; i++) {
-    NNActivations results = {0};
-    DataEntry entry = data->entries[i];
+  int chunkSize = data->n / THREADS;
 
-    NNPredict(nn, entry.board, &results);
+  for (int t = 0; t < THREADS; t++) {
+    jobs[t].start = t * chunkSize;
+    jobs[t].n = chunkSize;
+    jobs[t].data = data;
+    jobs[t].nn = nn;
 
-    e += Error(Sigmoid(results.outputActivations[0]), &entry);
+    pthread_create(&threads[t], NULL, &CalculateError, &jobs[t]);
   }
 
-  return e / data->n;
+  float e = 0.0f;
+
+  for (int t = 0; t < THREADS; t++) {
+    pthread_join(threads[t], NULL);
+    e += jobs[t].error;
+  }
+
+  return e / (chunkSize * THREADS);
+}
+
+void* CalculateError(void* arg) {
+  CalculateErrorJob* job = (CalculateErrorJob*)arg;
+  NN* nn = job->nn;
+
+  job->error = 0.0f;
+
+  for (int n = job->start; n < job->start + job->n; n++) {
+    DataEntry entry = job->data->entries[n];
+    NNActivations results[1];
+    NNPredict(nn, entry.board, results);
+
+    job->error += Error(Sigmoid(results->outputActivations[0]), &entry);
+  }
+
+  return NULL;
 }
 
 void Train(int batch, DataSet* data, NN* nn, NNGradients* g) {
@@ -146,11 +172,11 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g) {
 
 void* CalculateGradients(void* arg) {
   UpdateGradientsJob* job = (UpdateGradientsJob*)arg;
+  NN* nn = job->nn;
+  NNGradients* gradients = job->gradients;
 
   for (int n = job->start; n < job->start + job->n; n++) {
     DataEntry entry = job->data->entries[n];
-    NN* nn = job->nn;
-    NNGradients* gradients = job->gradients;
 
     NNActivations results[1];
     NNPredict(nn, entry.board, results);
@@ -171,8 +197,7 @@ void* CalculateGradients(void* arg) {
 
       for (int a = 0; a < 32; a++)
         if (entry.board[a])
-          for (int j = 0; j < N_HIDDEN; j++)
-            gradients->featureWeightGradients[entry.board[a] * N_HIDDEN + j].g += layerLoss;
+          gradients->featureWeightGradients[entry.board[a] * N_HIDDEN + i].g += layerLoss;
         else
           break;
     }

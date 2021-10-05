@@ -29,14 +29,4 @@ void ParseFen(char* fen, Board board) {
 
     fen++;
   }
-
-  // printf("[");
-  // int i;
-  // for (i = 0; i < 32; i++)
-  //   if (board[i])
-  //     printf("%d,", board[i]);
-  //   else
-  //     break;
-
-  // printf("] (%d)\n", i);
 }
