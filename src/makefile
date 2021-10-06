@@ -4,7 +4,7 @@ EXE = trainer
 
 LIBS = -lm -lpthread
 WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow
-CFLAGS = -O3 $(WFLAGS) -flto -march=native -DNDEBUG -g -Wl,--stack,33554432
+CFLAGS = -O3 $(WFLAGS) -flto -march=native -DNDEBUG -g -Wl,--stack,67108864
 
 POPCOUNT = -DPOPCOUNT -msse -msse3 -mpopcnt
 AVX2 = $(POPCOUNT) -mavx2 -msse4.1 -mssse3 -msse2

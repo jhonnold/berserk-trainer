@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
     error = newError;
 
     char buffer[64];
-    sprintf(buffer, "../nets/768x128x1.%d.nn", epoch);
+    sprintf(buffer, "../nets/berserk.e%d.%d.%d.nn", epoch, N_FEATURES, N_HIDDEN);
     SaveNN(nn, buffer);
   }
 }

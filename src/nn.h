@@ -4,7 +4,7 @@
 #include "board.h"
 
 #define N_FEATURES 768
-#define N_HIDDEN 128
+#define N_HIDDEN 256
 #define N_OUTPUT 1
 
 typedef struct {
