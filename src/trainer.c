@@ -35,13 +35,6 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  printf("Loading entries from %s\n", entriesPath);
-
-  DataSet* data = malloc(sizeof(DataSet));
-  data->n = 0;
-  data->entries = calloc(100000000, sizeof(DataEntry));
-  LoadEntries(entriesPath, data);
-
   NN* nn;
   if (!nnPath[0]) {
     printf("No net specified, generating a random net.\n");
@@ -51,13 +44,20 @@ int main(int argc, char** argv) {
     nn = LoadNN(nnPath);
   }
 
+  printf("Loading entries from %s\n", entriesPath);
+
+  DataSet* data = malloc(sizeof(DataSet));
+  data->n = 0;
+  data->entries = calloc(100000000, sizeof(DataEntry));
+  LoadEntries(entriesPath, data);
+
   NNGradients* gradients = malloc(sizeof(NNGradients));
   ClearGradients(gradients);
 
   float error = TotalError(data, nn);
   printf("Starting Error: [%1.8f]\n", error);
 
-  for (int epoch = 1; epoch <= 10000; epoch++) {
+  for (int epoch = 1; epoch <= 250; epoch++) {
     long epochStart = GetTimeMS();
 
     printf("Shuffling...\r");

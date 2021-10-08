@@ -19,7 +19,7 @@ long GetTimeMS() {
 }
 #endif
 
-const float SS = 3.5f / 1024;
+const float SS = 2.878242507f / 400;
 
 float Sigmoid(float s) { return 1.0f / (1.0f + expf(-s * SS)); }
 
