@@ -48,11 +48,15 @@ int main(int argc, char** argv) {
 
   DataSet* data = malloc(sizeof(DataSet));
   data->n = 0;
-  data->entries = calloc(100000000, sizeof(DataEntry));
+  data->entries = malloc(sizeof(DataEntry) * 500000000);
   LoadEntries(entriesPath, data);
 
   NNGradients* gradients = malloc(sizeof(NNGradients));
   ClearGradients(gradients);
+
+  NNGradients* threadGradients = malloc(sizeof(NNGradients) * THREADS);
+  for (int t = 0; t < THREADS; t++)
+    ClearGradients(&threadGradients[t]);
 
   float error = TotalError(data, nn);
   printf("Starting Error: [%1.8f]\n", error);
@@ -65,7 +69,7 @@ int main(int argc, char** argv) {
 
     int batches = data->n / BATCH_SIZE;
     for (int b = 0; b < batches; b++) {
-      Train(b, data, nn, gradients);
+      Train(b, data, nn, gradients, threadGradients);
       UpdateNetwork(nn, gradients);
 
       printf("Batch: [#%5d]\r", b + 1);
@@ -127,27 +131,27 @@ void* CalculateError(void* arg) {
     NNActivations results[1];
     NNPredict(nn, entry.board, results);
 
-    job->error += Error(Sigmoid(results->outputActivations[0]), &entry);
+    float result = results->outputActivations[0];
+    job->error += Error(Sigmoid(result), &entry);
   }
 
   return NULL;
 }
 
-void Train(int batch, DataSet* data, NN* nn, NNGradients* g) {
+void Train(int batch, DataSet* data, NN* nn, NNGradients* g, NNGradients* threadLocal) {
   pthread_t threads[THREADS];
-  NNGradients gradients[THREADS];
   UpdateGradientsJob jobs[THREADS];
 
   int chunkSize = BATCH_SIZE / THREADS;
 
   for (int t = 0; t < THREADS; t++) {
-    ClearGradients(&gradients[t]);
+    ClearGradients(&threadLocal[t]);
 
     jobs[t].start = batch * BATCH_SIZE + t * chunkSize;
     jobs[t].n = chunkSize;
     jobs[t].data = data;
     jobs[t].nn = nn;
-    jobs[t].gradients = &gradients[t];
+    jobs[t].gradients = &threadLocal[t];
 
     pthread_create(&threads[t], NULL, &CalculateGradients, &jobs[t]);
   }
@@ -157,16 +161,16 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g) {
 
   for (int t = 0; t < THREADS; t++) {
     for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
-      g->featureWeightGradients[i].g += gradients[t].featureWeightGradients[i].g;
+      g->featureWeightGradients[i].g += threadLocal[t].featureWeightGradients[i].g;
 
     for (int i = 0; i < N_HIDDEN * N_OUTPUT; i++)
-      g->hiddenWeightGradients[i].g += gradients[t].hiddenWeightGradients[i].g;
+      g->hiddenWeightGradients[i].g += threadLocal[t].hiddenWeightGradients[i].g;
 
     for (int i = 0; i < N_HIDDEN; i++)
-      g->hiddenBiasGradients[i].g += gradients[t].hiddenBiasGradients[i].g;
+      g->hiddenBiasGradients[i].g += threadLocal[t].hiddenBiasGradients[i].g;
 
     for (int i = 0; i < N_OUTPUT; i++)
-      g->outputBiasGradients[i].g += gradients[t].outputBiasGradients[i].g;
+      g->outputBiasGradients[i].g += threadLocal[t].outputBiasGradients[i].g;
   }
 }
 
@@ -181,7 +185,8 @@ void* CalculateGradients(void* arg) {
     NNActivations results[1];
     NNPredict(nn, entry.board, results);
 
-    float out = Sigmoid(results->outputActivations[0]);
+    float result = results->outputActivations[0];
+    float out = Sigmoid(result);
     float loss = SigmoidPrime(out) * ErrorGradient(out, &entry);
 
     gradients->outputBiasGradients[0].g += loss;

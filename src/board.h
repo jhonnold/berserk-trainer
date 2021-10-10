@@ -19,9 +19,13 @@ enum {
   N_PIECES
 };
 
-typedef uint64_t BitBoard;
-typedef int16_t Board[32];
+enum {
+  WHITE,
+  BLACK
+};
 
-void ParseFen(char* fen, Board board);
+typedef uint16_t Board[32];
+
+void ParseFen(char* fen, Board board, int stm);
 
 #endif

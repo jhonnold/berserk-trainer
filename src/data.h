@@ -4,6 +4,7 @@
 #include "board.h"
 
 typedef struct {
+    int8_t stm;
     float wdl, eval;
     Board board;
 } DataEntry;

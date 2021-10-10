@@ -49,7 +49,7 @@ float Error(float result, DataEntry* entry);
 float ErrorGradient(float result, DataEntry* entry);
 float TotalError(DataSet* data, NN* nn);
 void* CalculateError(void* arg);
-void Train(int batch, DataSet* data, NN* nn, NNGradients* g);
+void Train(int batch, DataSet* data, NN* nn, NNGradients* g, NNGradients* threadGradients);
 void* CalculateGradients(void* arg);
 void UpdateNetwork(NN* nn, NNGradients* g);
 void UpdateAndApplyGradient(float* v, Gradient* grad);
