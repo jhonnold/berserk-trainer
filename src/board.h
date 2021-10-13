@@ -24,8 +24,8 @@ enum {
   BLACK
 };
 
-typedef uint16_t Board[32];
+typedef uint16_t Board[2][32];
 
-void ParseFen(char* fen, Board board, int stm);
+void ParseFen(char* fen, Board board);
 
 #endif

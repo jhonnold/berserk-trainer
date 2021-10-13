@@ -18,18 +18,11 @@ typedef struct {
 } Gradient;
 
 typedef struct {
-  Gradient featureWeightGradients[N_FEATURES * N_HIDDEN];
-  Gradient hiddenWeightGradients[N_HIDDEN * N_OUTPUT];
-  Gradient hiddenBiasGradients[N_HIDDEN];
-  Gradient outputBiasGradients[N_OUTPUT];
+  Gradient outputBiasGradient;
+  Gradient featureWeightGradients[2][N_FEATURES * N_HIDDEN];
+  Gradient hiddenBiasGradients[2][N_HIDDEN];
+  Gradient hiddenWeightGradients[N_HIDDEN * 2];
 } NNGradients;
-
-typedef struct {
-  float featureWeightGradients[N_FEATURES * N_HIDDEN];
-  float hiddenWeightGradients[N_HIDDEN * N_OUTPUT];
-  float hiddenBiasGradients[N_HIDDEN];
-  float outputBiasGradients[N_OUTPUT];
-} BatchGradients;
 
 typedef struct {
   int start, n;

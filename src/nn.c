@@ -4,7 +4,6 @@
 #include <string.h>
 #include <time.h>
 
-
 #include "bits.h"
 #include "board.h"
 #include "nn.h"
@@ -16,25 +15,27 @@ const int OUTPUT_SIZE = N_OUTPUT;
 const int N_HIDDEN_LAYERS = 1;
 const int HIDDEN_SIZES[1] = {N_HIDDEN};
 
-void NNPredict(NN* nn, Board board, NNActivations* results) {
+void NNPredict(NN* nn, Board board, NNActivations* results, int stm) {
   // Apply first layer
-  memcpy(results->hiddenActivations, nn->hiddenBiases, sizeof(float) * N_HIDDEN);
+  memcpy(results->accumulators[WHITE], nn->hiddenBiases[WHITE], sizeof(float) * N_HIDDEN);
+  memcpy(results->accumulators[BLACK], nn->hiddenBiases[BLACK], sizeof(float) * N_HIDDEN);
 
-  for (int i = 0; i < 32; i++)
-    if (board[i])
-      for (int j = 0; j < N_HIDDEN; j++)
-        results->hiddenActivations[j] += nn->featureWeights[board[i] * N_HIDDEN + j];
-    else
+  for (int i = 0; i < 32; i++) {
+    if (!board[WHITE][i])
       break;
 
-  for (int i = 0; i < N_HIDDEN; i++)
-    results->hiddenActivations[i] = fmax(0.0f, results->hiddenActivations[i]);
+    for (int j = 0; j < N_HIDDEN; j++) {
+      results->accumulators[WHITE][j] += nn->featureWeights[WHITE][board[WHITE][i] * N_HIDDEN + j];
+      results->accumulators[BLACK][j] += nn->featureWeights[BLACK][board[BLACK][i] * N_HIDDEN + j];
+    }
+  }
 
   // Apply second layer
-  results->outputActivations[0] = nn->outputBiases[0];
-
-  for (int i = 0; i < N_HIDDEN; i++)
-    results->outputActivations[0] += nn->hiddenWeights[i] * results->hiddenActivations[i];
+  results->result = nn->outputBias;
+  for (int i = 0; i < N_HIDDEN; i++) {
+    results->result += nn->hiddenWeights[i] * fmax(0.0f, results->accumulators[stm][i]);
+    results->result += nn->hiddenWeights[i + N_HIDDEN] * fmax(0.0f, results->accumulators[stm ^ 1][i]);
+  }
 }
 
 NN* LoadNN(char* path) {
@@ -62,10 +63,12 @@ NN* LoadNN(char* path) {
 
   NN* nn = malloc(sizeof(NN));
 
-  fread(nn->featureWeights, 4, N_FEATURES * N_HIDDEN, fp);
-  fread(nn->hiddenBiases, 4, N_HIDDEN, fp);
-  fread(nn->hiddenWeights, 4, N_HIDDEN * N_OUTPUT, fp);
-  fread(nn->outputBiases, 4, N_OUTPUT, fp);
+  fread(nn->featureWeights[WHITE], 4, N_FEATURES * N_HIDDEN, fp);
+  fread(nn->featureWeights[BLACK], 4, N_FEATURES * N_HIDDEN, fp);
+  fread(nn->hiddenBiases[WHITE], 4, N_HIDDEN, fp);
+  fread(nn->hiddenBiases[BLACK], 4, N_HIDDEN, fp);
+  fread(nn->hiddenWeights, 4, N_HIDDEN * 2, fp);
+  fread(&nn->outputBias, 4, N_OUTPUT, fp);
 
   fclose(fp);
 
@@ -79,19 +82,26 @@ NN* LoadRandomNN() {
 
   float max = sqrtf(2.0f / (N_FEATURES * N_HIDDEN));
   for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
-    nn->featureWeights[i] = rand() * max / RAND_MAX;
+    nn->featureWeights[WHITE][i] = rand() * max / RAND_MAX;
+
+  max = sqrtf(2.0f / (N_FEATURES * N_HIDDEN));
+  for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
+    nn->featureWeights[BLACK][i] = rand() * max / RAND_MAX;
 
   max = sqrtf(2.0f / N_HIDDEN);
   for (int i = 0; i < N_HIDDEN; i++)
-    nn->hiddenBiases[i] = rand() * max / RAND_MAX;
+    nn->hiddenBiases[WHITE][i] = rand() * max / RAND_MAX;
 
   max = sqrtf(2.0f / N_HIDDEN);
   for (int i = 0; i < N_HIDDEN; i++)
+    nn->hiddenBiases[BLACK][i] = rand() * max / RAND_MAX;
+
+  max = sqrtf(1.0f / N_HIDDEN);
+  for (int i = 0; i < N_HIDDEN * 2; i++)
     nn->hiddenWeights[i] = rand() * max / RAND_MAX;
 
-  max = sqrtf(2.0f / N_OUTPUT);
-  for (int i = 0; i < N_OUTPUT; i++)
-    nn->outputBiases[i] = rand() * max / RAND_MAX;
+  max = sqrtf(2.0f);
+  nn->outputBias = rand() * max / RAND_MAX;
 
   return nn;
 }
@@ -111,10 +121,12 @@ void SaveNN(NN* nn, char* path) {
   fwrite(&N_HIDDEN_LAYERS, 4, 1, fp);
   fwrite(HIDDEN_SIZES, 4, N_HIDDEN_LAYERS, fp);
 
-  fwrite(nn->featureWeights, 4, N_FEATURES * N_HIDDEN, fp);
-  fwrite(nn->hiddenBiases, 4, N_HIDDEN, fp);
-  fwrite(nn->hiddenWeights, 4, N_HIDDEN * N_OUTPUT, fp);
-  fwrite(nn->outputBiases, 4, N_OUTPUT, fp);
+  fwrite(nn->featureWeights[WHITE], 4, N_FEATURES * N_HIDDEN, fp);
+  fwrite(nn->featureWeights[BLACK], 4, N_FEATURES * N_HIDDEN, fp);
+  fwrite(nn->hiddenBiases[WHITE], 4, N_HIDDEN, fp);
+  fwrite(nn->hiddenBiases[BLACK], 4, N_HIDDEN, fp);
+  fwrite(nn->hiddenWeights, 4, N_HIDDEN * 2, fp);
+  fwrite(&nn->outputBias, 4, N_OUTPUT, fp);
 
   fclose(fp);
 }
