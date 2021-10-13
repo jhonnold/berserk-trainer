@@ -4,7 +4,8 @@
 #include "data.h"
 #include "nn.h"
 
-#define THREADS 24
+#define ERR_THREADS 30
+#define THREADS 16
 #define BATCH_SIZE 16384
 
 #define ALPHA 0.01f

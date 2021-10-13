@@ -75,17 +75,18 @@ int main(int argc, char** argv) {
       printf("Batch: [#%5d]\r", b + 1);
     }
 
+    char buffer[64];
+    sprintf(buffer, "../nets/berserk.d9+10.e%d.%d.%d.nn", epoch, N_FEATURES, N_HIDDEN);
+    SaveNN(nn, buffer);
+
+    printf("Calculating Error...\r");
     float newError = TotalError(data, nn);
 
     long now = GetTimeMS();
-    printf("Epoch: [#%5d], Error: [%1.8f], Delta: [%+1.8f], Speed: [%9.0f pos/s]\n", epoch, newError, error - newError,
-           1000.0 * data->n / (now - epochStart));
+    printf("Epoch: [#%5d], Error: [%1.8f], Delta: [%+1.8f], LR: [%.5f], Speed: [%9.0f pos/s], Time: [%lds]\n", epoch,
+           newError, error - newError, ALPHA, 1000.0 * data->n / (now - epochStart), (now - epochStart) / 1000);
 
     error = newError;
-
-    char buffer[64];
-    sprintf(buffer, "../nets/berserk.e%d.%d.%d.nn", epoch, N_FEATURES, N_HIDDEN);
-    SaveNN(nn, buffer);
   }
 }
 
@@ -96,12 +97,12 @@ float Error(float result, DataEntry* entry) {
 float ErrorGradient(float result, DataEntry* entry) { return (result - entry->wdl) + (result - entry->eval); }
 
 float TotalError(DataSet* data, NN* nn) {
-  pthread_t threads[THREADS];
-  CalculateErrorJob jobs[THREADS];
+  pthread_t threads[ERR_THREADS];
+  CalculateErrorJob jobs[ERR_THREADS];
 
-  int chunkSize = data->n / THREADS;
+  int chunkSize = data->n / ERR_THREADS;
 
-  for (int t = 0; t < THREADS; t++) {
+  for (int t = 0; t < ERR_THREADS; t++) {
     jobs[t].start = t * chunkSize;
     jobs[t].n = chunkSize;
     jobs[t].data = data;
@@ -112,12 +113,12 @@ float TotalError(DataSet* data, NN* nn) {
 
   float e = 0.0f;
 
-  for (int t = 0; t < THREADS; t++) {
+  for (int t = 0; t < ERR_THREADS; t++) {
     pthread_join(threads[t], NULL);
     e += jobs[t].error;
   }
 
-  return e / (chunkSize * THREADS);
+  return e / (chunkSize * ERR_THREADS);
 }
 
 void* CalculateError(void* arg) {

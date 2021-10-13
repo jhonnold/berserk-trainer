@@ -3,11 +3,8 @@ SRC = *.c
 EXE = trainer
 
 LIBS = -lm -lpthread
-WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow
-CFLAGS = -O3 $(WFLAGS) -flto -march=native -DNDEBUG -g
-
-POPCOUNT = -DPOPCOUNT -msse -msse3 -mpopcnt
-AVX2 = $(POPCOUNT) -mavx2 -msse4.1 -mssse3 -msse2
+WFLAGS = -std=gnu17 -Wall -Wextra -Wshadow
+CFLAGS = -O3 $(WFLAGS) -flto -march=native -mtune=native -DNDEBUG -g
 
 all:
-	$(CC) $(CFLAGS) $(SRC) $(LIBS) $(AVX2) -o $(EXE)
+	$(CC) $(CFLAGS) $(SRC) $(LIBS) -o $(EXE)
