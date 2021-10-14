@@ -4,19 +4,19 @@
 #include "board.h"
 
 #define N_FEATURES 768
-#define N_HIDDEN 64
+#define N_HIDDEN 256
 #define N_OUTPUT 1
 
 typedef struct {
   float outputBias;
-  float featureWeights[2][N_FEATURES * N_HIDDEN];
-  float hiddenBiases[2][N_HIDDEN];
-  float hiddenWeights[N_HIDDEN * 2];
+  float featureWeights[2][N_FEATURES * N_HIDDEN] __attribute__((aligned(32)));
+  float hiddenBiases[2][N_HIDDEN] __attribute__((aligned(32)));
+  float hiddenWeights[N_HIDDEN * 2] __attribute__((aligned(32)));
 } NN;
 
 typedef struct {
   float result;
-  float accumulators[2][N_HIDDEN];
+  float accumulators[2][N_HIDDEN] __attribute__((aligned(32)));
 } NNActivations;
 
 void NNPredict(NN* nn, Board board, NNActivations* results, int stm);

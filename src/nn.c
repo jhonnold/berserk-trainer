@@ -1,3 +1,4 @@
+#include <immintrin.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,18 +25,42 @@ void NNPredict(NN* nn, Board board, NNActivations* results, int stm) {
     if (!board[WHITE][i])
       break;
 
-    for (int j = 0; j < N_HIDDEN; j++) {
-      results->accumulators[WHITE][j] += nn->featureWeights[WHITE][board[WHITE][i] * N_HIDDEN + j];
-      results->accumulators[BLACK][j] += nn->featureWeights[BLACK][board[BLACK][i] * N_HIDDEN + j];
+    for (int j = 0; j < N_HIDDEN; j += 8) {
+      __m256 weights = _mm256_load_ps(&nn->featureWeights[WHITE][board[WHITE][i] * N_HIDDEN + j]);
+      __m256 neurons = _mm256_load_ps(&results->accumulators[WHITE][j]);
+      _mm256_store_ps(&results->accumulators[WHITE][j], _mm256_add_ps(weights, neurons));
+
+      weights = _mm256_load_ps(&nn->featureWeights[BLACK][board[BLACK][i] * N_HIDDEN + j]);
+      neurons = _mm256_load_ps(&results->accumulators[BLACK][j]);
+      _mm256_store_ps(&results->accumulators[BLACK][j], _mm256_add_ps(weights, neurons));
     }
   }
 
   // Apply second layer
-  results->result = nn->outputBias;
-  for (int i = 0; i < N_HIDDEN; i++) {
-    results->result += nn->hiddenWeights[i] * fmax(0.0f, results->accumulators[stm][i]);
-    results->result += nn->hiddenWeights[i + N_HIDDEN] * fmax(0.0f, results->accumulators[stm ^ 1][i]);
+  const __m256 zero = _mm256_setzero_ps();
+  __m256 s0 = _mm256_setzero_ps();
+  __m256 s1 = _mm256_setzero_ps();
+
+  for (size_t j = 0; j < N_HIDDEN; j += 8) {
+    const __m256 stmActivations = _mm256_max_ps(_mm256_load_ps(results->accumulators[stm] + j), zero);
+    const __m256 stmWeights = _mm256_load_ps(nn->hiddenWeights + j);
+    _mm256_store_ps(results->accumulators[stm] + j, stmActivations);
+
+    const __m256 xstmActivations = _mm256_max_ps(_mm256_load_ps(results->accumulators[stm ^ 1] + j), zero);
+    const __m256 xstmWeights = _mm256_load_ps(nn->hiddenWeights + (j + N_HIDDEN));
+    _mm256_store_ps(results->accumulators[stm ^ 1] + j, xstmActivations);
+
+    s0 = _mm256_add_ps(s0, _mm256_mul_ps(stmActivations, stmWeights));
+    s1 = _mm256_add_ps(s1, _mm256_mul_ps(xstmActivations, xstmWeights));
   }
+
+  const __m256 r8 = _mm256_add_ps(s0, s1);
+  const __m128 r4 = _mm_add_ps(_mm256_castps256_ps128(r8), _mm256_extractf128_ps(r8, 1));
+  const __m128 r2 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
+  const __m128 r1 = _mm_add_ss(r2, _mm_shuffle_ps(r2, r2, 0x1));
+  const float sum = _mm_cvtss_f32(r1);
+
+  results->result = sum + nn->outputBias;
 }
 
 NN* LoadNN(char* path) {
