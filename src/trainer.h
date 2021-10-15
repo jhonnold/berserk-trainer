@@ -19,8 +19,8 @@ typedef struct {
 
 typedef struct {
   Gradient outputBiasGradient;
-  Gradient featureWeightGradients[2][N_FEATURES * N_HIDDEN];
-  Gradient hiddenBiasGradients[2][N_HIDDEN];
+  Gradient featureWeightGradients[N_FEATURES * N_HIDDEN];
+  Gradient hiddenBiasGradients[N_HIDDEN];
   Gradient hiddenWeightGradients[N_HIDDEN * 2];
 } NNGradients;
 

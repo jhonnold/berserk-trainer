@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
     }
 
     char buffer[64];
-    sprintf(buffer, "../nets/berserk.hp.e%d.2x%d.2x%d.nn", epoch, N_FEATURES, N_HIDDEN);
+    sprintf(buffer, "../nets/berserk.hp.e%d.%d.2x%d.nn", epoch, N_FEATURES, N_HIDDEN);
     SaveNN(nn, buffer);
 
     printf("Calculating Error...\r");
@@ -160,14 +160,10 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, NNGradients* thread
 
   for (int t = 0; t < THREADS; t++) {
     for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
-      g->featureWeightGradients[WHITE][i].g += threadLocal[t].featureWeightGradients[WHITE][i].g;
-    for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
-      g->featureWeightGradients[BLACK][i].g += threadLocal[t].featureWeightGradients[BLACK][i].g;
+      g->featureWeightGradients[i].g += threadLocal[t].featureWeightGradients[i].g;
 
     for (int i = 0; i < N_HIDDEN; i++)
-      g->hiddenBiasGradients[WHITE][i].g += threadLocal[t].hiddenBiasGradients[WHITE][i].g;
-    for (int i = 0; i < N_HIDDEN; i++)
-      g->hiddenBiasGradients[BLACK][i].g += threadLocal[t].hiddenBiasGradients[BLACK][i].g;
+      g->hiddenBiasGradients[i].g += threadLocal[t].hiddenBiasGradients[i].g;
 
     for (int i = 0; i < N_HIDDEN * 2; i++)
       g->hiddenWeightGradients[i].g += threadLocal[t].hiddenWeightGradients[i].g;
@@ -201,25 +197,24 @@ void* CalculateGradients(void* arg) {
       float xstmLayerLoss = loss * nn->hiddenWeights[i + N_HIDDEN] * (results->accumulators[entry.stm ^ 1][i] > 0.0f);
 
       if (stmLayerLoss) {
-        gradients->hiddenBiasGradients[entry.stm][i].g += stmLayerLoss;
+        gradients->hiddenBiasGradients[i].g += stmLayerLoss;
 
         for (int j = 0; j < 32; j++) {
           if (!entry.board[entry.stm][j])
             break;
 
-          gradients->featureWeightGradients[entry.stm][entry.board[entry.stm][j] * N_HIDDEN + i].g += stmLayerLoss;
+          gradients->featureWeightGradients[entry.board[entry.stm][j] * N_HIDDEN + i].g += stmLayerLoss;
         }
       }
 
       if (xstmLayerLoss) {
-        gradients->hiddenBiasGradients[entry.stm ^ 1][i].g += xstmLayerLoss;
+        gradients->hiddenBiasGradients[i].g += xstmLayerLoss;
 
         for (int j = 0; j < 32; j++) {
           if (!entry.board[entry.stm ^ 1][j])
             break;
 
-          gradients->featureWeightGradients[entry.stm ^ 1][entry.board[entry.stm ^ 1][j] * N_HIDDEN + i].g +=
-              xstmLayerLoss;
+          gradients->featureWeightGradients[entry.board[entry.stm ^ 1][j] * N_HIDDEN + i].g += xstmLayerLoss;
         }
       }
     }
@@ -230,16 +225,10 @@ void* CalculateGradients(void* arg) {
 
 void UpdateNetwork(NN* nn, NNGradients* g) {
   for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
-    UpdateAndApplyGradient(&nn->featureWeights[WHITE][i], &g->featureWeightGradients[WHITE][i]);
-
-  for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
-    UpdateAndApplyGradient(&nn->featureWeights[BLACK][i], &g->featureWeightGradients[BLACK][i]);
+    UpdateAndApplyGradient(&nn->featureWeights[i], &g->featureWeightGradients[i]);
 
   for (int i = 0; i < N_HIDDEN; i++)
-    UpdateAndApplyGradient(&nn->hiddenBiases[WHITE][i], &g->hiddenBiasGradients[WHITE][i]);
-
-  for (int i = 0; i < N_HIDDEN; i++)
-    UpdateAndApplyGradient(&nn->hiddenBiases[BLACK][i], &g->hiddenBiasGradients[BLACK][i]);
+    UpdateAndApplyGradient(&nn->hiddenBiases[i], &g->hiddenBiasGradients[i]);
 
   for (int i = 0; i < N_HIDDEN * 2; i++)
     UpdateAndApplyGradient(&nn->hiddenWeights[i], &g->hiddenWeightGradients[i]);
@@ -263,27 +252,15 @@ void UpdateAndApplyGradient(float* v, Gradient* grad) {
 
 void ClearGradients(NNGradients* gradients) {
   for (int i = 0; i < N_FEATURES * N_HIDDEN; i++) {
-    gradients->featureWeightGradients[WHITE][i].g = 0;
-    gradients->featureWeightGradients[WHITE][i].V = 0;
-    gradients->featureWeightGradients[WHITE][i].M = 0;
-  }
-
-  for (int i = 0; i < N_FEATURES * N_HIDDEN; i++) {
-    gradients->featureWeightGradients[BLACK][i].g = 0;
-    gradients->featureWeightGradients[BLACK][i].V = 0;
-    gradients->featureWeightGradients[BLACK][i].M = 0;
+    gradients->featureWeightGradients[i].g = 0;
+    gradients->featureWeightGradients[i].V = 0;
+    gradients->featureWeightGradients[i].M = 0;
   }
 
   for (int i = 0; i < N_HIDDEN; i++) {
-    gradients->hiddenBiasGradients[WHITE][i].g = 0;
-    gradients->hiddenBiasGradients[WHITE][i].V = 0;
-    gradients->hiddenBiasGradients[WHITE][i].M = 0;
-  }
-
-  for (int i = 0; i < N_HIDDEN; i++) {
-    gradients->hiddenBiasGradients[BLACK][i].g = 0;
-    gradients->hiddenBiasGradients[BLACK][i].V = 0;
-    gradients->hiddenBiasGradients[BLACK][i].M = 0;
+    gradients->hiddenBiasGradients[i].g = 0;
+    gradients->hiddenBiasGradients[i].V = 0;
+    gradients->hiddenBiasGradients[i].M = 0;
   }
 
   for (int i = 0; i < N_HIDDEN * 2; i++) {

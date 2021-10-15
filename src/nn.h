@@ -9,8 +9,8 @@
 
 typedef struct {
   float outputBias;
-  float featureWeights[2][N_FEATURES * N_HIDDEN] __attribute__((aligned(32)));
-  float hiddenBiases[2][N_HIDDEN] __attribute__((aligned(32)));
+  float featureWeights[N_FEATURES * N_HIDDEN] __attribute__((aligned(32)));
+  float hiddenBiases[N_HIDDEN] __attribute__((aligned(32)));
   float hiddenWeights[N_HIDDEN * 2] __attribute__((aligned(32)));
 } NN;
 
