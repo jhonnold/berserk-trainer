@@ -64,21 +64,21 @@ void NNPredict(NN* nn, Board board, NNActivations* results, int stm) {
 uint64_t NetworkHash(NN* nn) {
   uint64_t hash = 0;
   for (int i = 0; i < N_HIDDEN * N_FEATURES; i++) {
-    int v = *((int*)&nn->featureWeights[i]);
+    int v = nn->featureWeights[i];
     hash = (hash + (324723947ULL + v)) ^ 93485734985ULL;
   }
 
   for (int i = 0; i < N_HIDDEN; i++) {
-    int v = *((int*)&nn->hiddenBiases[i]);
+    int v = nn->hiddenBiases[i];
     hash = (hash + (324723947ULL + v)) ^ 93485734985ULL;
   }
 
   for (int i = 0; i < N_HIDDEN * 2; i++) {
-    int v = *((int*)&nn->hiddenWeights[i]);
+    int v = nn->hiddenWeights[i];
     hash = (hash + (324723947ULL + v)) ^ 93485734985ULL;
   }
 
-  int v = *((int*)&nn->outputBias);
+  int v = nn->outputBias;
   return (hash + (324723947ULL + v)) ^ 93485734985ULL;
 }
 
@@ -99,7 +99,7 @@ NN* LoadNN(char* path) {
 
   uint64_t hash;
   fread(&hash, sizeof(uint64_t), 1, fp);
-  printf("Reading network with hash %ld\n", hash);
+  printf("Reading network with hash %lld\n", hash);
 
   NN* nn = malloc(sizeof(NN));
 
