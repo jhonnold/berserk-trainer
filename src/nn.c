@@ -9,12 +9,7 @@
 #include "board.h"
 #include "nn.h"
 
-const int NETWORK_MAGIC = 'B' | 'Z' << 8 | 1 << 16 | 0 << 24;
-const int NETWORK_ID = 0;
-const int INPUT_SIZE = N_FEATURES;
-const int OUTPUT_SIZE = N_OUTPUT;
-const int N_HIDDEN_LAYERS = 1;
-const int HIDDEN_SIZES[1] = {N_HIDDEN};
+const int NETWORK_MAGIC = 'B' | 'R' << 8 | 'K' << 16 | 'R' << 24;
 
 void NNPredict(NN* nn, Board board, NNActivations* results, int stm) {
   // Apply first layer
@@ -22,15 +17,18 @@ void NNPredict(NN* nn, Board board, NNActivations* results, int stm) {
   memcpy(results->accumulators[BLACK], nn->hiddenBiases, sizeof(float) * N_HIDDEN);
 
   for (int i = 0; i < 32; i++) {
-    if (!board[WHITE][i])
+    if (board[i].pc < 0)
       break;
 
+    int wf = feature(board[i], WHITE);
+    int bf = feature(board[i], BLACK);
+
     for (int j = 0; j < N_HIDDEN; j += 8) {
-      __m256 weights = _mm256_load_ps(&nn->featureWeights[board[WHITE][i] * N_HIDDEN + j]);
+      __m256 weights = _mm256_load_ps(&nn->featureWeights[wf * N_HIDDEN + j]);
       __m256 neurons = _mm256_load_ps(&results->accumulators[WHITE][j]);
       _mm256_store_ps(&results->accumulators[WHITE][j], _mm256_add_ps(weights, neurons));
 
-      weights = _mm256_load_ps(&nn->featureWeights[board[BLACK][i] * N_HIDDEN + j]);
+      weights = _mm256_load_ps(&nn->featureWeights[bf * N_HIDDEN + j]);
       neurons = _mm256_load_ps(&results->accumulators[BLACK][j]);
       _mm256_store_ps(&results->accumulators[BLACK][j], _mm256_add_ps(weights, neurons));
     }
@@ -63,6 +61,27 @@ void NNPredict(NN* nn, Board board, NNActivations* results, int stm) {
   results->result = sum + nn->outputBias;
 }
 
+uint64_t NetworkHash(NN* nn) {
+  uint64_t hash = 0;
+  for (int i = 0; i < N_HIDDEN * N_FEATURES; i++) {
+    int v = *((int*)&nn->featureWeights[i]);
+    hash = (hash + (324723947ULL + v)) ^ 93485734985ULL;
+  }
+
+  for (int i = 0; i < N_HIDDEN; i++) {
+    int v = *((int*)&nn->hiddenBiases[i]);
+    hash = (hash + (324723947ULL + v)) ^ 93485734985ULL;
+  }
+
+  for (int i = 0; i < N_HIDDEN * 2; i++) {
+    int v = *((int*)&nn->hiddenWeights[i]);
+    hash = (hash + (324723947ULL + v)) ^ 93485734985ULL;
+  }
+
+  int v = *((int*)&nn->outputBias);
+  return (hash + (324723947ULL + v)) ^ 93485734985ULL;
+}
+
 NN* LoadNN(char* path) {
   FILE* fp = fopen(path, "rb");
   if (fp == NULL) {
@@ -78,20 +97,16 @@ NN* LoadNN(char* path) {
     exit(1);
   }
 
-  // Skip past the topology as we only support one
-  int temp;
-  fread(&temp, 4, 1, fp);
-  fread(&temp, 4, 1, fp);
-  fread(&temp, 4, 1, fp);
-  fread(&temp, 4, 1, fp);
-  fread(&temp, 4, 1, fp);
+  uint64_t hash;
+  fread(&hash, sizeof(uint64_t), 1, fp);
+  printf("Reading network with hash %ld\n", hash);
 
   NN* nn = malloc(sizeof(NN));
 
-  fread(nn->featureWeights, 4, N_FEATURES * N_HIDDEN, fp);
-  fread(nn->hiddenBiases, 4, N_HIDDEN, fp);
-  fread(nn->hiddenWeights, 4, N_HIDDEN * 2, fp);
-  fread(&nn->outputBias, 4, N_OUTPUT, fp);
+  fread(nn->featureWeights, sizeof(float), N_FEATURES * N_HIDDEN, fp);
+  fread(nn->hiddenBiases, sizeof(float), N_HIDDEN, fp);
+  fread(nn->hiddenWeights, sizeof(float), N_HIDDEN * 2, fp);
+  fread(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
 
   fclose(fp);
 
@@ -129,17 +144,15 @@ void SaveNN(NN* nn, char* path) {
     return;
   }
 
-  fwrite(&NETWORK_MAGIC, 4, 1, fp);
-  fwrite(&NETWORK_ID, 4, 1, fp);
-  fwrite(&INPUT_SIZE, 4, 1, fp);
-  fwrite(&OUTPUT_SIZE, 4, 1, fp);
-  fwrite(&N_HIDDEN_LAYERS, 4, 1, fp);
-  fwrite(HIDDEN_SIZES, 4, N_HIDDEN_LAYERS, fp);
+  fwrite(&NETWORK_MAGIC, sizeof(int), 1, fp);
+  
+  uint64_t hash = NetworkHash(nn);
+  fwrite(&hash, sizeof(uint64_t), 1, fp);
 
-  fwrite(nn->featureWeights, 4, N_FEATURES * N_HIDDEN, fp);
-  fwrite(nn->hiddenBiases, 4, N_HIDDEN, fp);
-  fwrite(nn->hiddenWeights, 4, N_HIDDEN * 2, fp);
-  fwrite(&nn->outputBias, 4, N_OUTPUT, fp);
+  fwrite(nn->featureWeights, sizeof(float), N_FEATURES * N_HIDDEN, fp);
+  fwrite(nn->hiddenBiases, sizeof(float), N_HIDDEN, fp);
+  fwrite(nn->hiddenWeights, sizeof(float), N_HIDDEN * 2, fp);
+  fwrite(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
 
   fclose(fp);
 }

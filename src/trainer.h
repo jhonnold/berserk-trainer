@@ -5,7 +5,7 @@
 #include "nn.h"
 
 #define ERR_THREADS 30
-#define THREADS 8
+#define THREADS 16
 #define BATCH_SIZE 16384
 
 #define ALPHA 0.01f
@@ -25,11 +25,18 @@ typedef struct {
 } NNGradients;
 
 typedef struct {
+  float outputBias;
+  float featureWeights[N_FEATURES * N_HIDDEN];
+  float hiddenBias[N_HIDDEN];
+  float hiddenWeights[N_HIDDEN * 2];
+} BatchGradients;
+
+typedef struct {
   int start, n;
   NNActivations activations;
   DataSet* data;
   NN* nn;
-  NNGradients* gradients;
+  BatchGradients* gradients;
 } UpdateGradientsJob;
 
 typedef struct {
@@ -43,10 +50,11 @@ float Error(float result, DataEntry* entry);
 float ErrorGradient(float result, DataEntry* entry);
 float TotalError(DataSet* data, NN* nn);
 void* CalculateError(void* arg);
-void Train(int batch, DataSet* data, NN* nn, NNGradients* g, NNGradients* threadGradients);
+void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* threadGradients);
 void* CalculateGradients(void* arg);
 void UpdateNetwork(NN* nn, NNGradients* g);
 void UpdateAndApplyGradient(float* v, Gradient* grad);
 void ClearGradients(NNGradients* gradients);
+void ClearBatchGradients(BatchGradients* gradients);
 
 #endif

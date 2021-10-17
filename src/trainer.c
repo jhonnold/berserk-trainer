@@ -54,9 +54,7 @@ int main(int argc, char** argv) {
   NNGradients* gradients = malloc(sizeof(NNGradients));
   ClearGradients(gradients);
 
-  NNGradients* threadGradients = malloc(sizeof(NNGradients) * THREADS);
-  for (int t = 0; t < THREADS; t++)
-    ClearGradients(&threadGradients[t]);
+  BatchGradients* localGradients = malloc(sizeof(BatchGradients) * THREADS);
 
   float error = TotalError(data, nn);
   printf("Starting Error: [%1.8f]\n", error);
@@ -69,7 +67,7 @@ int main(int argc, char** argv) {
 
     int batches = data->n / BATCH_SIZE;
     for (int b = 0; b < batches; b++) {
-      Train(b, data, nn, gradients, threadGradients);
+      Train(b, data, nn, gradients, localGradients);
       UpdateNetwork(nn, gradients);
 
       printf("Batch: [#%5d]\r", b + 1);
@@ -137,15 +135,13 @@ void* CalculateError(void* arg) {
   return NULL;
 }
 
-void Train(int batch, DataSet* data, NN* nn, NNGradients* g, NNGradients* threadLocal) {
+void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* threadLocal) {
   pthread_t threads[THREADS];
   UpdateGradientsJob jobs[THREADS];
 
   int chunkSize = BATCH_SIZE / THREADS;
 
   for (int t = 0; t < THREADS; t++) {
-    ClearGradients(&threadLocal[t]);
-
     jobs[t].start = batch * BATCH_SIZE + t * chunkSize;
     jobs[t].n = chunkSize;
     jobs[t].data = data;
@@ -160,22 +156,24 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, NNGradients* thread
 
   for (int t = 0; t < THREADS; t++) {
     for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
-      g->featureWeightGradients[i].g += threadLocal[t].featureWeightGradients[i].g;
+      g->featureWeightGradients[i].g += threadLocal[t].featureWeights[i];
 
     for (int i = 0; i < N_HIDDEN; i++)
-      g->hiddenBiasGradients[i].g += threadLocal[t].hiddenBiasGradients[i].g;
+      g->hiddenBiasGradients[i].g += threadLocal[t].hiddenBias[i];
 
     for (int i = 0; i < N_HIDDEN * 2; i++)
-      g->hiddenWeightGradients[i].g += threadLocal[t].hiddenWeightGradients[i].g;
+      g->hiddenWeightGradients[i].g += threadLocal[t].hiddenWeights[i];
 
-    g->outputBiasGradient.g += threadLocal[t].outputBiasGradient.g;
+    g->outputBiasGradient.g += threadLocal[t].outputBias;
   }
 }
 
 void* CalculateGradients(void* arg) {
   UpdateGradientsJob* job = (UpdateGradientsJob*)arg;
   NN* nn = job->nn;
-  NNGradients* gradients = job->gradients;
+  BatchGradients* gradients = job->gradients;
+
+  ClearBatchGradients(gradients);
 
   for (int n = job->start; n < job->start + job->n; n++) {
     DataEntry entry = job->data->entries[n];
@@ -186,35 +184,30 @@ void* CalculateGradients(void* arg) {
     float out = Sigmoid(results->result);
     float loss = SigmoidPrime(out) * ErrorGradient(out, &entry);
 
-    gradients->outputBiasGradient.g += loss;
+    gradients->outputBias += loss;
     for (int i = 0; i < N_HIDDEN; i++) {
-      gradients->hiddenWeightGradients[i].g += results->accumulators[entry.stm][i] * loss;
-      gradients->hiddenWeightGradients[i + N_HIDDEN].g += results->accumulators[entry.stm ^ 1][i] * loss;
+      gradients->hiddenWeights[i] += results->accumulators[entry.stm][i] * loss;
+      gradients->hiddenWeights[i + N_HIDDEN] += results->accumulators[entry.stm ^ 1][i] * loss;
     }
 
     for (int i = 0; i < N_HIDDEN; i++) {
       float stmLayerLoss = loss * nn->hiddenWeights[i] * (results->accumulators[entry.stm][i] > 0.0f);
       float xstmLayerLoss = loss * nn->hiddenWeights[i + N_HIDDEN] * (results->accumulators[entry.stm ^ 1][i] > 0.0f);
 
-      if (stmLayerLoss) {
-        gradients->hiddenBiasGradients[i].g += stmLayerLoss;
+      gradients->hiddenBias[i] += stmLayerLoss + xstmLayerLoss;
 
-        for (int j = 0; j < 32; j++) {
-          if (!entry.board[entry.stm][j])
-            break;
+      for (int j = 0; j < 32; j++) {
+        if (entry.board[j].pc < 0)
+          break;
 
-          gradients->featureWeightGradients[entry.board[entry.stm][j] * N_HIDDEN + i].g += stmLayerLoss;
+        if (stmLayerLoss) {
+          int stmf = feature(entry.board[j], entry.stm);
+          gradients->featureWeights[stmf * N_HIDDEN + i] += stmLayerLoss;
         }
-      }
 
-      if (xstmLayerLoss) {
-        gradients->hiddenBiasGradients[i].g += xstmLayerLoss;
-
-        for (int j = 0; j < 32; j++) {
-          if (!entry.board[entry.stm ^ 1][j])
-            break;
-
-          gradients->featureWeightGradients[entry.board[entry.stm ^ 1][j] * N_HIDDEN + i].g += xstmLayerLoss;
+        if (xstmLayerLoss) {
+          int xstmf = feature(entry.board[j], entry.stm ^ 1);
+          gradients->featureWeights[xstmf * N_HIDDEN + i] += xstmLayerLoss;
         }
       }
     }
@@ -272,4 +265,17 @@ void ClearGradients(NNGradients* gradients) {
   gradients->outputBiasGradient.g = 0;
   gradients->outputBiasGradient.V = 0;
   gradients->outputBiasGradient.M = 0;
+}
+
+void ClearBatchGradients(BatchGradients* gradients) {
+  for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
+    gradients->featureWeights[i] = 0;
+
+  for (int i = 0; i < N_HIDDEN; i++)
+    gradients->hiddenBias[i] = 0;
+
+  for (int i = 0; i < N_HIDDEN * 2; i++)
+    gradients->hiddenWeights[i] = 0;
+
+  gradients->outputBias = 0;
 }
