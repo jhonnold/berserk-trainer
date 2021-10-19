@@ -3,7 +3,7 @@
 
 #include "board.h"
 
-#define N_FEATURES 768
+#define N_FEATURES 1536
 #define N_HIDDEN 256
 #define N_OUTPUT 1
 
@@ -19,7 +19,7 @@ typedef struct {
   float accumulators[2][N_HIDDEN] __attribute__((aligned(64)));
 } NNActivations;
 
-void NNPredict(NN* nn, Board board, NNActivations* results, int stm);
+void NNPredict(NN* nn, Board* board, NNActivations* results, int stm);
 
 NN* LoadNN(char* path);
 NN* LoadRandomNN();
