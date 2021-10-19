@@ -19,20 +19,25 @@ enum {
   N_PIECES
 };
 
-enum {
-  WHITE,
-  BLACK
-};
+enum { WHITE, BLACK };
 
 typedef struct {
   int8_t pc, sq;
 } Piece;
-typedef Piece Board[32];
 
+typedef struct {
+  int8_t wkingSq;
+  int8_t bkingSq;
+  Piece pieces[32];
+} Board;
+
+int8_t rank(int8_t sq);
+int8_t file(int8_t sq);
 int8_t mirror(int8_t s);
 int8_t invertPiece(int8_t pc);
-int16_t feature(Piece p, const int side);
+int8_t sameSideKing(int8_t sq, int8_t ksq);
+int16_t feature(Piece p, int8_t kingSq, const int perspective);
 
-void ParseFen(char* fen, Board board);
+void ParseFen(char* fen, Board* board);
 
 #endif
