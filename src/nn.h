@@ -4,26 +4,28 @@
 #include "board.h"
 
 #define N_FEATURES 768
-#define N_HIDDEN 512
+#define N_HIDDEN 256
 #define N_OUTPUT 1
 
 typedef struct {
-    float featureWeights[N_FEATURES * N_HIDDEN];
-    float hiddenWeights[N_HIDDEN * N_OUTPUT];
-    float hiddenBiases[N_HIDDEN];
-    float outputBiases[N_OUTPUT];
+  float outputBias;
+  float featureWeights[N_FEATURES * N_HIDDEN] __attribute__((aligned(64)));
+  float hiddenBiases[N_HIDDEN] __attribute__((aligned(64)));
+  float hiddenWeights[N_HIDDEN * 2] __attribute__((aligned(64)));
 } NN;
 
 typedef struct {
-    float hiddenActivations[N_HIDDEN];
-    float outputActivations[N_OUTPUT];
+  float result;
+  float accumulators[2][N_HIDDEN] __attribute__((aligned(64)));
 } NNActivations;
 
-void NNPredict(NN* nn, Board board, NNActivations* results);
+void NNPredict(NN* nn, Board board, NNActivations* results, int stm);
 
 NN* LoadNN(char* path);
 NN* LoadRandomNN();
 
 void SaveNN(NN* nn, char* path);
+
+uint64_t NetworkHash(NN* nn);
 
 #endif

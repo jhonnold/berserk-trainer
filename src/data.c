@@ -29,7 +29,7 @@ void LoadEntries(char* path, DataSet* data) {
 
 void LoadDataEntry(char* buffer, DataEntry* result) {
   result->stm = strstr(buffer, "w ") ? WHITE : BLACK;
-  ParseFen(buffer, result->board, result->stm);
+  ParseFen(buffer, result->board);
 
   if (strstr(buffer, "[1.0]"))
     result->wdl = result->stm == BLACK ? 0.0 : 1.0;

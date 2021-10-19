@@ -18,17 +18,17 @@ typedef struct {
 } Gradient;
 
 typedef struct {
+  Gradient outputBiasGradient;
   Gradient featureWeightGradients[N_FEATURES * N_HIDDEN];
-  Gradient hiddenWeightGradients[N_HIDDEN * N_OUTPUT];
   Gradient hiddenBiasGradients[N_HIDDEN];
-  Gradient outputBiasGradients[N_OUTPUT];
+  Gradient hiddenWeightGradients[N_HIDDEN * 2];
 } NNGradients;
 
 typedef struct {
-  float featureWeightGradients[N_FEATURES * N_HIDDEN];
-  float hiddenWeightGradients[N_HIDDEN * N_OUTPUT];
-  float hiddenBiasGradients[N_HIDDEN];
-  float outputBiasGradients[N_OUTPUT];
+  float outputBias;
+  float featureWeights[N_FEATURES * N_HIDDEN];
+  float hiddenBias[N_HIDDEN];
+  float hiddenWeights[N_HIDDEN * 2];
 } BatchGradients;
 
 typedef struct {
@@ -36,7 +36,7 @@ typedef struct {
   NNActivations activations;
   DataSet* data;
   NN* nn;
-  NNGradients* gradients;
+  BatchGradients* gradients;
 } UpdateGradientsJob;
 
 typedef struct {
@@ -50,10 +50,11 @@ float Error(float result, DataEntry* entry);
 float ErrorGradient(float result, DataEntry* entry);
 float TotalError(DataSet* data, NN* nn);
 void* CalculateError(void* arg);
-void Train(int batch, DataSet* data, NN* nn, NNGradients* g, NNGradients* threadGradients);
+void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* threadGradients);
 void* CalculateGradients(void* arg);
 void UpdateNetwork(NN* nn, NNGradients* g);
 void UpdateAndApplyGradient(float* v, Gradient* grad);
 void ClearGradients(NNGradients* gradients);
+void ClearBatchGradients(BatchGradients* gradients);
 
 #endif

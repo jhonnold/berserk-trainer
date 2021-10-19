@@ -24,8 +24,15 @@ enum {
   BLACK
 };
 
-typedef uint16_t Board[32];
+typedef struct {
+  int8_t pc, sq;
+} Piece;
+typedef Piece Board[32];
 
-void ParseFen(char* fen, Board board, int stm);
+int8_t mirror(int8_t s);
+int8_t invertPiece(int8_t pc);
+int16_t feature(Piece p, const int side);
+
+void ParseFen(char* fen, Board board);
 
 #endif
