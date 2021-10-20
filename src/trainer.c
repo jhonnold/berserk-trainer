@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
 
   DataSet* data = malloc(sizeof(DataSet));
   data->n = 0;
-  data->entries = malloc(sizeof(DataEntry) * 500000000);
+  data->entries = malloc(sizeof(DataEntry) * MAX_POSITIONS);
   LoadEntries(entriesPath, data);
 
   NNGradients* gradients = malloc(sizeof(NNGradients));

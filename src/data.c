@@ -16,7 +16,7 @@ void LoadEntries(char* path, DataSet* data) {
 
   int p = 0;
   char in[128];
-  while (fgets(in, 128, fp)) {
+  while (p < MAX_POSITIONS && fgets(in, 128, fp)) {
     LoadDataEntry(in, &data->entries[p++]);
 
     if (p % 16384 == 0)

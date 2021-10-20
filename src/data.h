@@ -3,6 +3,8 @@
 
 #include "board.h"
 
+#define MAX_POSITIONS 1000000000
+
 typedef struct {
     int8_t stm;
     float wdl, eval;
