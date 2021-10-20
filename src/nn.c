@@ -11,17 +11,17 @@
 
 const int NETWORK_MAGIC = 'B' | 'R' << 8 | 'K' << 16 | 'R' << 24;
 
-void NNPredict(NN* nn, Board board, NNActivations* results, int stm) {
+void NNPredict(NN* nn, Board* board, NNActivations* results, int stm) {
   // Apply first layer
   memcpy(results->accumulators[WHITE], nn->hiddenBiases, sizeof(float) * N_HIDDEN);
   memcpy(results->accumulators[BLACK], nn->hiddenBiases, sizeof(float) * N_HIDDEN);
 
   for (int i = 0; i < 32; i++) {
-    if (board[i].pc < 0)
+    if (board->pieces[i].pc < 0)
       break;
 
-    int wf = feature(board[i], WHITE);
-    int bf = feature(board[i], BLACK);
+    int wf = feature(board->pieces[i], board->wkingSq, WHITE);
+    int bf = feature(board->pieces[i], board->bkingSq, BLACK);
 
     for (int j = 0; j < N_HIDDEN; j += 8) {
       __m256 weights = _mm256_load_ps(&nn->featureWeights[wf * N_HIDDEN + j]);

@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
 
   DataSet* data = malloc(sizeof(DataSet));
   data->n = 0;
-  data->entries = malloc(sizeof(DataEntry) * 500000000);
+  data->entries = malloc(sizeof(DataEntry) * MAX_POSITIONS);
   LoadEntries(entriesPath, data);
 
   NNGradients* gradients = malloc(sizeof(NNGradients));
@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
     }
 
     char buffer[64];
-    sprintf(buffer, "../nets/berserk.hp.e%d.%d.2x%d.nn", epoch, N_FEATURES, N_HIDDEN);
+    sprintf(buffer, "../nets/berserk.rks.e%d.%d.2x%d.nn", epoch, N_FEATURES, N_HIDDEN);
     SaveNN(nn, buffer);
 
     printf("Calculating Error...\r");
@@ -128,7 +128,7 @@ void* CalculateError(void* arg) {
   for (int n = job->start; n < job->start + job->n; n++) {
     DataEntry entry = job->data->entries[n];
     NNActivations results[1];
-    NNPredict(nn, entry.board, results, entry.stm);
+    NNPredict(nn, &entry.board, results, entry.stm);
     job->error += Error(Sigmoid(results->result), &entry);
   }
 
@@ -177,9 +177,10 @@ void* CalculateGradients(void* arg) {
 
   for (int n = job->start; n < job->start + job->n; n++) {
     DataEntry entry = job->data->entries[n];
+    Board board = entry.board;
 
     NNActivations results[1];
-    NNPredict(nn, entry.board, results, entry.stm);
+    NNPredict(nn, &board, results, entry.stm);
 
     float out = Sigmoid(results->result);
     float loss = SigmoidPrime(out) * ErrorGradient(out, &entry);
@@ -196,17 +197,20 @@ void* CalculateGradients(void* arg) {
 
       gradients->hiddenBias[i] += stmLayerLoss + xstmLayerLoss;
 
+      int8_t stmKing = entry.stm == WHITE ? board.wkingSq : board.bkingSq;
+      int8_t xstmKing = entry.stm == WHITE ? board.bkingSq : board.wkingSq;
+
       for (int j = 0; j < 32; j++) {
-        if (entry.board[j].pc < 0)
+        if (board.pieces[j].pc < 0)
           break;
 
         if (stmLayerLoss) {
-          int stmf = feature(entry.board[j], entry.stm);
+          int stmf = feature(board.pieces[j], stmKing, entry.stm);
           gradients->featureWeights[stmf * N_HIDDEN + i] += stmLayerLoss;
         }
 
         if (xstmLayerLoss) {
-          int xstmf = feature(entry.board[j], entry.stm ^ 1);
+          int xstmf = feature(board.pieces[j], xstmKing, entry.stm ^ 1);
           gradients->featureWeights[xstmf * N_HIDDEN + i] += xstmLayerLoss;
         }
       }

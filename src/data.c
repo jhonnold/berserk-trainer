@@ -16,7 +16,7 @@ void LoadEntries(char* path, DataSet* data) {
 
   int p = 0;
   char in[128];
-  while (fgets(in, 128, fp)) {
+  while (p < MAX_POSITIONS && fgets(in, 128, fp)) {
     LoadDataEntry(in, &data->entries[p++]);
 
     if (p % 16384 == 0)
@@ -29,7 +29,7 @@ void LoadEntries(char* path, DataSet* data) {
 
 void LoadDataEntry(char* buffer, DataEntry* result) {
   result->stm = strstr(buffer, "w ") ? WHITE : BLACK;
-  ParseFen(buffer, result->board);
+  ParseFen(buffer, &result->board);
 
   if (strstr(buffer, "[1.0]"))
     result->wdl = result->stm == BLACK ? 0.0 : 1.0;
