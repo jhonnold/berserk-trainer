@@ -34,6 +34,26 @@ void NNPredict(NN* nn, Board* board, NNActivations* results, int stm) {
     }
   }
 
+  for (int c = WHITE; c <= BLACK; c++) {
+    for (int i = 0; i < 8; i++) {
+      if (!board->passers[c][i])
+        break;
+
+      int wf = passerFeature(board->passers[c][i], c, WHITE);
+      int bf = passerFeature(board->passers[c][i], c, BLACK);
+
+      for (int j = 0; j < N_HIDDEN; j += 8) {
+        __m256 weights = _mm256_load_ps(&nn->featureWeights[wf * N_HIDDEN + j]);
+        __m256 neurons = _mm256_load_ps(&results->accumulators[WHITE][j]);
+        _mm256_store_ps(&results->accumulators[WHITE][j], _mm256_add_ps(weights, neurons));
+
+        weights = _mm256_load_ps(&nn->featureWeights[bf * N_HIDDEN + j]);
+        neurons = _mm256_load_ps(&results->accumulators[BLACK][j]);
+        _mm256_store_ps(&results->accumulators[BLACK][j], _mm256_add_ps(weights, neurons));
+      }
+    }
+  }
+
   // Apply second layer
   const __m256 zero = _mm256_setzero_ps();
   __m256 s0 = _mm256_setzero_ps();
@@ -145,7 +165,7 @@ void SaveNN(NN* nn, char* path) {
   }
 
   fwrite(&NETWORK_MAGIC, sizeof(int), 1, fp);
-  
+
   uint64_t hash = NetworkHash(nn);
   fwrite(&hash, sizeof(uint64_t), 1, fp);
 

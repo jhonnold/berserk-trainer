@@ -214,6 +214,23 @@ void* CalculateGradients(void* arg) {
           gradients->featureWeights[xstmf * N_HIDDEN + i] += xstmLayerLoss;
         }
       }
+
+      for (int c = WHITE; c <= BLACK; c++) {
+        for (int j = 0; j < 8; j++) {
+          if (!board.passers[c][j])
+            break;
+
+          if (stmLayerLoss) {
+            int stmf = passerFeature(board.passers[c][j], c, entry.stm);
+            gradients->featureWeights[stmf * N_HIDDEN + i] += stmLayerLoss;
+          }
+
+          if (xstmLayerLoss) {
+            int xstmf = passerFeature(board.passers[c][j], c, entry.stm ^ 1);
+            gradients->featureWeights[xstmf * N_HIDDEN + i] += xstmLayerLoss;
+          }
+        }
+      }
     }
   }
 
