@@ -5,7 +5,7 @@
 #include "nn.h"
 
 #define ERR_THREADS 30
-#define THREADS 16
+#define THREADS 30
 #define BATCH_SIZE 16384
 
 #define ALPHA 0.01f
