@@ -20,8 +20,8 @@ void NNPredict(NN* nn, Board* board, NNActivations* results, int stm) {
     if (board->pieces[i].pc < 0)
       break;
 
-    int wf = feature(board->pieces[i], board->wkingSq, WHITE);
-    int bf = feature(board->pieces[i], board->bkingSq, BLACK);
+    int wf = feature(board, i, WHITE);
+    int bf = feature(board, i, BLACK);
 
     for (int j = 0; j < N_HIDDEN; j += 8) {
       __m256 weights = _mm256_load_ps(&nn->featureWeights[wf * N_HIDDEN + j]);

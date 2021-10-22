@@ -197,20 +197,17 @@ void* CalculateGradients(void* arg) {
 
       gradients->hiddenBias[i] += stmLayerLoss + xstmLayerLoss;
 
-      int8_t stmKing = entry.stm == WHITE ? board.wkingSq : board.bkingSq;
-      int8_t xstmKing = entry.stm == WHITE ? board.bkingSq : board.wkingSq;
-
       for (int j = 0; j < 32; j++) {
         if (board.pieces[j].pc < 0)
           break;
 
         if (stmLayerLoss) {
-          int stmf = feature(board.pieces[j], stmKing, entry.stm);
+          int stmf = feature(&board, j, entry.stm);
           gradients->featureWeights[stmf * N_HIDDEN + i] += stmLayerLoss;
         }
 
         if (xstmLayerLoss) {
-          int xstmf = feature(board.pieces[j], xstmKing, entry.stm ^ 1);
+          int xstmf = feature(&board, j, entry.stm ^ 1);
           gradients->featureWeights[xstmf * N_HIDDEN + i] += xstmLayerLoss;
         }
       }

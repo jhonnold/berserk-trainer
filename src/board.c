@@ -1,7 +1,8 @@
 #include <math.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
+
 
 #include "bits.h"
 #include "board.h"
@@ -21,15 +22,19 @@ inline int8_t mirror(int8_t s) { return s ^ 56; }
 
 inline int8_t invertPiece(int8_t pc) { return invertMap[pc]; }
 
-inline int8_t sameSideKing(int8_t sq, int8_t ksq) {
-  return (sq & 0x04) == (ksq & 0x04);
+inline int8_t sameSideKing(int8_t sq, int8_t ksq) { return (sq & 0x04) == (ksq & 0x04); }
+
+inline int8_t kingIdx(int8_t sq, int8_t stmKingSq, int8_t xstmKingSq) {
+  return 2 * ((sq & 0x04) == (stmKingSq & 0x04)) + ((sq & 0x04) == (xstmKingSq & 0x04));
 }
 
-inline int16_t feature(Piece p, int8_t kingSq, const int perspective) {
+inline int16_t feature(Board* board, int i, const int perspective) {
+  Piece p = board->pieces[i];
+
   if (perspective == WHITE)
-    return p.pc * 128 + sameSideKing(p.sq, kingSq) * 64 + p.sq;
+    return p.pc * 256 + kingIdx(p.sq, board->wkingSq, board->bkingSq) * 64 + p.sq;
   else
-    return invertPiece(p.pc) * 128 + sameSideKing(p.sq, kingSq) * 64 + mirror(p.sq);
+    return invertPiece(p.pc) * 256 + kingIdx(p.sq, board->bkingSq, board->wkingSq) * 64 + mirror(p.sq);
 }
 
 void ParseFen(char* fen, Board* board) {
