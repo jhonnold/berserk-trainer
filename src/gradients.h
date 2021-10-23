@@ -34,12 +34,17 @@ INLINE void ApplyGradients(NN* nn, NNGradients* g) {
     UpdateAndApplyGradient(&nn->hiddenWeights[i], &g->hiddenWeightGradients[i]);
 
   UpdateAndApplyGradient(&nn->outputBias, &g->outputBiasGradient);
+
+#pragma omp parallel for schedule(static, N_FEATURES / THREADS) num_threads(THREADS)
+  for (int i = 0; i < N_FEATURES; i++)
+    UpdateAndApplyGradient(&nn->skipWeights[i], &g->skipWeightGradients[i]);
 }
 
 INLINE void ClearGradients(NNGradients* gradients) {
   memset(gradients->featureWeightGradients, 0, sizeof(gradients->featureWeightGradients));
   memset(gradients->hiddenBiasGradients, 0, sizeof(gradients->hiddenBiasGradients));
   memset(gradients->hiddenWeightGradients, 0, sizeof(gradients->hiddenWeightGradients));
+  memset(gradients->skipWeightGradients, 0, sizeof(gradients->skipWeightGradients));
   gradients->outputBiasGradient = (Gradient){.g = 0.0f, .M = 0.0f, .V = 0.0f};
 }
 

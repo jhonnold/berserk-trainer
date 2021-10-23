@@ -27,7 +27,12 @@ INLINE uint64_t NetworkHash(NN* nn) {
   for (int i = 0; i < N_HIDDEN * 2; i++)
     hash = H(hash, (int)nn->hiddenWeights[i]);
 
-  return H(hash, (int)nn->outputBias);
+  hash = H(hash, (int)nn->outputBias);
+
+  for (int i = 0; i < N_FEATURES; i++)
+    hash = H(hash, (int)nn->skipWeights[i]);
+
+  return hash;
 }
 
 INLINE float Random(int s) {

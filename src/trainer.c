@@ -127,14 +127,14 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g) {
       local[t].hiddenWeights[i + N_HIDDEN] += results->accumulators[entry.stm ^ 1][i] * loss;
     }
 
+    Square stmKing = entry.stm == WHITE ? board.wk : board.bk;
+    Square xstmKing = entry.stm == WHITE ? board.bk : board.wk;
+
     for (int i = 0; i < N_HIDDEN; i++) {
       float stmLayerLoss = loss * nn->hiddenWeights[i] * (results->accumulators[entry.stm][i] > 0.0f);
       float xstmLayerLoss = loss * nn->hiddenWeights[i + N_HIDDEN] * (results->accumulators[entry.stm ^ 1][i] > 0.0f);
 
       local[t].hiddenBias[i] += stmLayerLoss + xstmLayerLoss;
-
-      Square stmKing = entry.stm == WHITE ? board.wk : board.bk;
-      Square xstmKing = entry.stm == WHITE ? board.bk : board.wk;
 
       for (int j = 0; j < board.n; j++) {
         Feature stmf = idx(board.pieces[j], stmKing, entry.stm);
@@ -143,6 +143,11 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g) {
         Feature xstmf = idx(board.pieces[j], xstmKing, entry.stm ^ 1);
         local[t].featureWeights[xstmf * N_HIDDEN + i] += xstmLayerLoss;
       }
+    }
+
+    for (int j = 0; j < board.n; j++) {
+      Feature stmf = idx(board.pieces[j], stmKing, entry.stm);
+      local[t].skipWeights[stmf] += loss;
     }
   }
 
@@ -157,5 +162,8 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g) {
       g->hiddenWeightGradients[i].g += local[t].hiddenWeights[i];
 
     g->outputBiasGradient.g += local[t].outputBias;
+
+    for (int i = 0; i < N_FEATURES; i++)
+      g->skipWeightGradients[i].g += local[t].skipWeights[i];
   }
 }
