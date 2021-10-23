@@ -8,8 +8,7 @@
 #define N_HIDDEN 256
 #define N_OUTPUT 1
 
-#define ERR_THREADS 30
-#define THREADS 30
+#define THREADS 16
 #define BATCH_SIZE 16384
 
 #define ALPHA 0.01f
@@ -92,21 +91,6 @@ typedef struct {
   float hiddenBias[N_HIDDEN];
   float hiddenWeights[N_HIDDEN * 2];
 } BatchGradients;
-
-typedef struct {
-  int start, n;
-  NNActivations activations;
-  DataSet* data;
-  NN* nn;
-  BatchGradients* gradients;
-} UpdateGradientsJob;
-
-typedef struct {
-  int start, n;
-  float error;
-  DataSet* data;
-  NN* nn;
-} CalculateErrorJob;
 
 extern const Piece charToPiece[];
 extern const Piece opposite[];
