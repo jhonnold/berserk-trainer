@@ -35,4 +35,16 @@ INLINE float Random(int s) {
   return rand() * m / RAND_MAX;
 }
 
+// https://en.wikipedia.org/wiki/Fast_inverse_square_root
+INLINE float InvSQRT(float n) {
+  float x2 = n * 0.5f;
+
+  long i = *(long*)&n;
+  i = 0x5f3759df - (i >> 1);
+  n = *(float*)&i;
+  n *= 1.5f - (x2 * n * n);
+
+  return n;
+}
+
 #endif
