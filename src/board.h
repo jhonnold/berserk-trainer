@@ -1,42 +1,21 @@
 #ifndef BOARD_H
 #define BOARD_H
 
-#include <inttypes.h>
+#include "util.h"
+#include "types.h"
 
-enum {
-  WHITE_PAWN,
-  WHITE_KNIGHT,
-  WHITE_BISHOP,
-  WHITE_ROOK,
-  WHITE_QUEEN,
-  WHITE_KING,
-  BLACK_PAWN,
-  BLACK_KNIGHT,
-  BLACK_BISHOP,
-  BLACK_ROOK,
-  BLACK_QUEEN,
-  BLACK_KING,
-  N_PIECES
-};
+INLINE Square mirror(Square s) { return s ^ 56; }
 
-enum { WHITE, BLACK };
+INLINE bool ss(Square s1, Square s2) { return (s1 & 4) == (s2 & 4); }
 
-typedef struct {
-  int8_t pc, sq;
-} Piece;
+INLINE Piece inv(Piece p) { return opposite[p]; }
 
-typedef struct {
-  int8_t wkingSq;
-  int8_t bkingSq;
-  Piece pieces[32];
-} Board;
-
-int8_t rank(int8_t sq);
-int8_t file(int8_t sq);
-int8_t mirror(int8_t s);
-int8_t invertPiece(int8_t pc);
-int8_t sameSideKing(int8_t sq, int8_t ksq);
-int16_t feature(Piece p, int8_t kingSq, const int perspective);
+INLINE Feature idx(OccupiedSquare occ, Square king, const int view) {
+  if (view == WHITE)
+    return occ.pc * 128 + ss(occ.sq, king) * 64 + occ.sq;
+  else
+    return inv(occ.pc) * 128 + ss(occ.sq, king) * 64 + mirror(occ.sq);
+}
 
 void ParseFen(char* fen, Board* board);
 

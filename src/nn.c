@@ -16,70 +16,22 @@ void NNPredict(NN* nn, Board* board, NNActivations* results, int stm) {
   memcpy(results->accumulators[WHITE], nn->hiddenBiases, sizeof(float) * N_HIDDEN);
   memcpy(results->accumulators[BLACK], nn->hiddenBiases, sizeof(float) * N_HIDDEN);
 
-  for (int i = 0; i < 32; i++) {
-    if (board->pieces[i].pc < 0)
-      break;
+  for (int i = 0; i < board->n; i++) {
+    Feature wf = idx(board->pieces[i], board->wk, WHITE);
+    Feature bf = idx(board->pieces[i], board->bk, BLACK);
 
-    int wf = feature(board->pieces[i], board->wkingSq, WHITE);
-    int bf = feature(board->pieces[i], board->bkingSq, BLACK);
-
-    for (int j = 0; j < N_HIDDEN; j += 8) {
-      __m256 weights = _mm256_load_ps(&nn->featureWeights[wf * N_HIDDEN + j]);
-      __m256 neurons = _mm256_load_ps(&results->accumulators[WHITE][j]);
-      _mm256_store_ps(&results->accumulators[WHITE][j], _mm256_add_ps(weights, neurons));
-
-      weights = _mm256_load_ps(&nn->featureWeights[bf * N_HIDDEN + j]);
-      neurons = _mm256_load_ps(&results->accumulators[BLACK][j]);
-      _mm256_store_ps(&results->accumulators[BLACK][j], _mm256_add_ps(weights, neurons));
+    for (size_t j = 0; j < N_HIDDEN; j++) {
+      results->accumulators[WHITE][j] += nn->featureWeights[wf * N_HIDDEN + j];
+      results->accumulators[BLACK][j] += nn->featureWeights[bf * N_HIDDEN + j];
     }
   }
 
-  // Apply second layer
-  const __m256 zero = _mm256_setzero_ps();
-  __m256 s0 = _mm256_setzero_ps();
-  __m256 s1 = _mm256_setzero_ps();
+  ReLU(results->accumulators[stm], N_HIDDEN);
+  ReLU(results->accumulators[stm ^ 1], N_HIDDEN);
 
-  for (size_t j = 0; j < N_HIDDEN; j += 8) {
-    const __m256 stmActivations = _mm256_max_ps(_mm256_load_ps(results->accumulators[stm] + j), zero);
-    const __m256 stmWeights = _mm256_load_ps(nn->hiddenWeights + j);
-    _mm256_store_ps(results->accumulators[stm] + j, stmActivations);
-
-    const __m256 xstmActivations = _mm256_max_ps(_mm256_load_ps(results->accumulators[stm ^ 1] + j), zero);
-    const __m256 xstmWeights = _mm256_load_ps(nn->hiddenWeights + (j + N_HIDDEN));
-    _mm256_store_ps(results->accumulators[stm ^ 1] + j, xstmActivations);
-
-    s0 = _mm256_add_ps(s0, _mm256_mul_ps(stmActivations, stmWeights));
-    s1 = _mm256_add_ps(s1, _mm256_mul_ps(xstmActivations, xstmWeights));
-  }
-
-  const __m256 r8 = _mm256_add_ps(s0, s1);
-  const __m128 r4 = _mm_add_ps(_mm256_castps256_ps128(r8), _mm256_extractf128_ps(r8, 1));
-  const __m128 r2 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
-  const __m128 r1 = _mm_add_ss(r2, _mm_shuffle_ps(r2, r2, 0x1));
-  const float sum = _mm_cvtss_f32(r1);
-
-  results->result = sum + nn->outputBias;
-}
-
-uint64_t NetworkHash(NN* nn) {
-  uint64_t hash = 0;
-  for (int i = 0; i < N_HIDDEN * N_FEATURES; i++) {
-    int v = nn->featureWeights[i];
-    hash = (hash + (324723947ULL + v)) ^ 93485734985ULL;
-  }
-
-  for (int i = 0; i < N_HIDDEN; i++) {
-    int v = nn->hiddenBiases[i];
-    hash = (hash + (324723947ULL + v)) ^ 93485734985ULL;
-  }
-
-  for (int i = 0; i < N_HIDDEN * 2; i++) {
-    int v = nn->hiddenWeights[i];
-    hash = (hash + (324723947ULL + v)) ^ 93485734985ULL;
-  }
-
-  int v = nn->outputBias;
-  return (hash + (324723947ULL + v)) ^ 93485734985ULL;
+  results->result = DotProduct(results->accumulators[stm], nn->hiddenWeights, N_HIDDEN) +
+                    DotProduct(results->accumulators[stm ^ 1], nn->hiddenWeights + N_HIDDEN, N_HIDDEN) + //
+                    nn->outputBias;
 }
 
 NN* LoadNN(char* path) {
@@ -99,7 +51,7 @@ NN* LoadNN(char* path) {
 
   uint64_t hash;
   fread(&hash, sizeof(uint64_t), 1, fp);
-  printf("Reading network with hash %lld\n", hash);
+  printf("Reading network with hash %llx\n", hash);
 
   NN* nn = malloc(sizeof(NN));
 
@@ -115,28 +67,22 @@ NN* LoadNN(char* path) {
 
 NN* LoadRandomNN() {
   srand(time(NULL));
-
   NN* nn = malloc(sizeof(NN));
 
-  float max = sqrtf(2.0f / (N_FEATURES * N_HIDDEN));
   for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
-    nn->featureWeights[i] = rand() * max / RAND_MAX;
+    nn->featureWeights[i] = Random(N_FEATURES * N_HIDDEN);
 
-  max = sqrtf(2.0f / N_HIDDEN);
   for (int i = 0; i < N_HIDDEN; i++)
-    nn->hiddenBiases[i] = rand() * max / RAND_MAX;
+    nn->hiddenBiases[i] = Random(N_HIDDEN);
 
-  max = sqrtf(1.0f / N_HIDDEN);
   for (int i = 0; i < N_HIDDEN * 2; i++)
-    nn->hiddenWeights[i] = rand() * max / RAND_MAX;
+    nn->hiddenWeights[i] = Random(N_HIDDEN * 2);
 
-  max = sqrtf(2.0f);
-  nn->outputBias = rand() * max / RAND_MAX;
+  nn->outputBias = Random(1);
 
   return nn;
 }
 
-// https://github.com/amanjpro/zahak-trainer/blob/master/network.go#L105
 void SaveNN(NN* nn, char* path) {
   FILE* fp = fopen(path, "wb");
   if (fp == NULL) {
@@ -145,7 +91,7 @@ void SaveNN(NN* nn, char* path) {
   }
 
   fwrite(&NETWORK_MAGIC, sizeof(int), 1, fp);
-  
+
   uint64_t hash = NetworkHash(nn);
   fwrite(&hash, sizeof(uint64_t), 1, fp);
 

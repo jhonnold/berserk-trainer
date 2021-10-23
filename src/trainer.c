@@ -88,12 +88,6 @@ int main(int argc, char** argv) {
   }
 }
 
-float Error(float result, DataEntry* entry) {
-  return powf(result - entry->wdl, 2) * 0.5f + powf(result - entry->eval, 2) * 0.5f;
-}
-
-float ErrorGradient(float result, DataEntry* entry) { return (result - entry->wdl) + (result - entry->eval); }
-
 float TotalError(DataSet* data, NN* nn) {
   pthread_t threads[ERR_THREADS];
   CalculateErrorJob jobs[ERR_THREADS];
@@ -110,11 +104,11 @@ float TotalError(DataSet* data, NN* nn) {
   }
 
   float e = 0.0f;
-
-  for (int t = 0; t < ERR_THREADS; t++) {
+  for (int t = 0; t < ERR_THREADS; t++)
     pthread_join(threads[t], NULL);
+
+  for (int t = 0; t < ERR_THREADS; t++)
     e += jobs[t].error;
-  }
 
   return e / (chunkSize * ERR_THREADS);
 }
@@ -197,20 +191,17 @@ void* CalculateGradients(void* arg) {
 
       gradients->hiddenBias[i] += stmLayerLoss + xstmLayerLoss;
 
-      int8_t stmKing = entry.stm == WHITE ? board.wkingSq : board.bkingSq;
-      int8_t xstmKing = entry.stm == WHITE ? board.bkingSq : board.wkingSq;
+      Square stmKing = entry.stm == WHITE ? board.wk : board.bk;
+      Square xstmKing = entry.stm == WHITE ? board.bk : board.wk;
 
-      for (int j = 0; j < 32; j++) {
-        if (board.pieces[j].pc < 0)
-          break;
-
+      for (int j = 0; j < board.n; j++) {
         if (stmLayerLoss) {
-          int stmf = feature(board.pieces[j], stmKing, entry.stm);
+          Feature stmf = idx(board.pieces[j], stmKing, entry.stm);
           gradients->featureWeights[stmf * N_HIDDEN + i] += stmLayerLoss;
         }
 
         if (xstmLayerLoss) {
-          int xstmf = feature(board.pieces[j], xstmKing, entry.stm ^ 1);
+          Feature xstmf = idx(board.pieces[j], xstmKing, entry.stm ^ 1);
           gradients->featureWeights[xstmf * N_HIDDEN + i] += xstmLayerLoss;
         }
       }

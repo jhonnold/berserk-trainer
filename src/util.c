@@ -4,7 +4,6 @@
 #include <stddef.h>
 #include <sys/time.h>
 #endif
-#include <math.h>
 
 #include "util.h"
 
@@ -18,9 +17,3 @@ long GetTimeMS() {
   return time.tv_sec * 1000 + time.tv_usec / 1000;
 }
 #endif
-
-const float SS = 2.878242507f / 400;
-
-float Sigmoid(float s) { return 1.0f / (1.0f + expf(-s * SS)); }
-
-float SigmoidPrime(float s) { return s * (1.0 - s) * SS; }
