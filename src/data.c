@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 
+#include "random.h"
 #include "board.h"
 #include "data.h"
 #include "util.h"
@@ -53,11 +53,10 @@ void LoadDataEntry(char* buffer, DataEntry* result) {
 }
 
 void ShuffleData(DataSet* data) {
-  srand(time(NULL));
   DataEntry temp;
 
   for (int i = 0; i < data->n; i++) {
-    int j = rand() % data->n;
+    int j = RandomUInt64() % data->n;
     temp = data->entries[i];
     data->entries[i] = data->entries[j];
     data->entries[j] = temp;
