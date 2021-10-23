@@ -8,7 +8,7 @@
 #define N_HIDDEN 256
 #define N_OUTPUT 1
 
-#define THREADS 16
+#define THREADS 24
 #define BATCH_SIZE 16384
 
 #define ALPHA 0.01f

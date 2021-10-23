@@ -108,7 +108,7 @@ float TotalError(DataSet* data, NN* nn) {
 void Train(int batch, DataSet* data, NN* nn, NNGradients* g) {
   BatchGradients local[THREADS] = {0};
 
-#pragma omp parallel for schedule(auto) num_threads(THREADS)
+#pragma omp parallel for schedule(static, BATCH_SIZE / THREADS) num_threads(THREADS)
   for (int n = 0; n < BATCH_SIZE; n++) {
     const int t = omp_get_thread_num();
 

@@ -21,15 +21,15 @@ INLINE void UpdateAndApplyGradient(float* v, Gradient* grad) {
 }
 
 INLINE void ApplyGradients(NN* nn, NNGradients* g) {
-#pragma omp parallel for schedule(auto) num_threads(THREADS)
+#pragma omp parallel for schedule(static, N_FEATURES* N_HIDDEN / THREADS) num_threads(THREADS)
   for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
     UpdateAndApplyGradient(&nn->featureWeights[i], &g->featureWeightGradients[i]);
 
-#pragma omp parallel for schedule(auto) num_threads(THREADS)
+#pragma omp parallel for schedule(static, N_HIDDEN / THREADS) num_threads(THREADS)
   for (int i = 0; i < N_HIDDEN; i++)
     UpdateAndApplyGradient(&nn->hiddenBiases[i], &g->hiddenBiasGradients[i]);
 
-#pragma omp parallel for schedule(auto) num_threads(THREADS)
+#pragma omp parallel for schedule(static, 2 * N_HIDDEN / THREADS) num_threads(THREADS)
   for (int i = 0; i < N_HIDDEN * 2; i++)
     UpdateAndApplyGradient(&nn->hiddenWeights[i], &g->hiddenWeightGradients[i]);
 
