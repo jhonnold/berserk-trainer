@@ -4,7 +4,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define N_FEATURES 1536
+#define N_FEATURES 3072
 #define N_HIDDEN 256
 #define N_OUTPUT 1
 
