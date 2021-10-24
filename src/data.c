@@ -28,8 +28,8 @@ void LoadEntries(char* path, DataSet* data) {
 }
 
 void LoadDataEntry(char* buffer, DataEntry* result) {
-  result->stm = strstr(buffer, "w ") ? WHITE : BLACK;
-  ParseFen(buffer, &result->board);
+  Color stm = strstr(buffer, "w ") ? WHITE : BLACK;
+  ParseFen(buffer, &result->board, stm);
 
   if (strstr(buffer, "[1.0]"))
     result->wdl = 1.0;
@@ -46,7 +46,7 @@ void LoadDataEntry(char* buffer, DataEntry* result) {
   result->eval = Sigmoid(eval);
   
   // Invert for black to move
-  if (result->stm == BLACK) {
+  if (stm == BLACK) {
     result->wdl = 1 - result->wdl;
     result->eval = 1 - result->eval;
   }

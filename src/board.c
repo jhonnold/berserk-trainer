@@ -5,10 +5,9 @@
 
 #include "board.h"
 
-void ParseFen(char* fen, Board* board) {
+void ParseFen(char* fen, Board* board, Color stm) {
   char* _fen = fen;
 
-  board->pieces = malloc(sizeof(OccupiedSquare) * 32);
   board->n = 0;
   board->wk = INT8_MAX;
   board->bk = INT8_MAX;
@@ -18,13 +17,20 @@ void ParseFen(char* fen, Board* board) {
     if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
       Piece pc = charToPiece[(int)*fen];
 
-      if (c == 'k')
-        board->bk = mirror(sq);
-      else if (c == 'K')
-        board->wk = mirror(sq);
+      if (c == 'k') {
+        if (stm == WHITE)
+          board->bk = mirror(sq);
+        else
+          board->wk = sq;
+      } else if (c == 'K') {
+        if (stm == WHITE)
+          board->wk = mirror(sq);
+        else
+          board->bk = sq;
+      }
 
-      board->pieces[board->n].pc = pc;
-      board->pieces[board->n].sq = mirror(sq);
+      board->pieces[board->n].pc = stm == WHITE ? pc : inv(pc);
+      board->pieces[board->n].sq = stm == WHITE ? mirror(sq) : sq;
 
       board->n++;
     } else if (c >= '1' && c <= '8')
@@ -43,6 +49,4 @@ void ParseFen(char* fen, Board* board) {
     printf("Unable to locate kings in FEN: %s!\n", _fen);
     exit(1);
   }
-
-  board->pieces = realloc(board->pieces, sizeof(OccupiedSquare) * board->n);
 }

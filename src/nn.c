@@ -11,7 +11,7 @@
 
 const int NETWORK_MAGIC = 'B' | 'R' << 8 | 'K' << 16 | 'R' << 24;
 
-void NNPredict(NN* nn, Board* board, NNActivations* results, int stm) {
+void NNPredict(NN* nn, Board* board, NNActivations* results) {
   results->result = 0.0f;
 
   // Apply first layer
@@ -27,15 +27,15 @@ void NNPredict(NN* nn, Board* board, NNActivations* results, int stm) {
       results->accumulators[BLACK][j] += nn->featureWeights[bf * N_HIDDEN + j];
     }
 
-    results->result += nn->skipWeights[stm == WHITE ? wf : bf];
+    results->result += nn->skipWeights[wf];
   }
 
-  ReLU(results->accumulators[stm], N_HIDDEN);
-  ReLU(results->accumulators[stm ^ 1], N_HIDDEN);
+  ReLU(results->accumulators[WHITE], N_HIDDEN);
+  ReLU(results->accumulators[BLACK], N_HIDDEN);
 
-  results->result += DotProduct(results->accumulators[stm], nn->hiddenWeights, N_HIDDEN) +
-                    DotProduct(results->accumulators[stm ^ 1], nn->hiddenWeights + N_HIDDEN, N_HIDDEN) + //
-                    nn->outputBias;
+  results->result += DotProduct(results->accumulators[WHITE], nn->hiddenWeights, N_HIDDEN) +
+                     DotProduct(results->accumulators[BLACK], nn->hiddenWeights + N_HIDDEN, N_HIDDEN) + //
+                     nn->outputBias;
 }
 
 NN* LoadNN(char* path) {

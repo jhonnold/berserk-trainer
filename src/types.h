@@ -36,6 +36,7 @@ enum {
 
 enum { WHITE, BLACK };
 
+typedef uint8_t Color;
 typedef uint8_t Square;
 typedef uint8_t Piece;
 typedef uint16_t Feature;
@@ -48,11 +49,10 @@ typedef struct {
 typedef struct {
   int8_t n;
   Square wk, bk;
-  OccupiedSquare* pieces;
+  OccupiedSquare pieces[32];
 } Board;
 
 typedef struct {
-  int8_t stm;
   float wdl, eval;
   Board board;
 } DataEntry;

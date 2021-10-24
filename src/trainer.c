@@ -97,7 +97,7 @@ float TotalError(DataSet* data, NN* nn) {
     DataEntry entry = data->entries[i];
 
     NNActivations results[1];
-    NNPredict(nn, &entry.board, results, entry.stm);
+    NNPredict(nn, &entry.board, results);
 
     e += Error(Sigmoid(results->result), &entry);
   }
@@ -106,9 +106,12 @@ float TotalError(DataSet* data, NN* nn) {
 }
 
 void Train(int batch, DataSet* data, NN* nn, NNGradients* g) {
-  BatchGradients local[THREADS] = {0};
+  BatchGradients local[THREADS];
+#pragma omp parallel for schedule(auto) num_threads(THREADS)
+  for (int t = 0; t < THREADS; t++)
+    memset(&local[t], 0, sizeof(BatchGradients));
 
-#pragma omp parallel for schedule(static, BATCH_SIZE / THREADS) num_threads(THREADS)
+#pragma omp parallel for schedule(auto) num_threads(THREADS)
   for (int n = 0; n < BATCH_SIZE; n++) {
     const int t = omp_get_thread_num();
 
@@ -116,39 +119,34 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g) {
     Board board = entry.board;
 
     NNActivations results[1];
-    NNPredict(nn, &board, results, entry.stm);
+    NNPredict(nn, &board, results);
 
     float out = Sigmoid(results->result);
     float loss = SigmoidPrime(out) * ErrorGradient(out, &entry);
 
     local[t].outputBias += loss;
     for (int i = 0; i < N_HIDDEN; i++) {
-      local[t].hiddenWeights[i] += results->accumulators[entry.stm][i] * loss;
-      local[t].hiddenWeights[i + N_HIDDEN] += results->accumulators[entry.stm ^ 1][i] * loss;
+      local[t].hiddenWeights[i] += results->accumulators[WHITE][i] * loss;
+      local[t].hiddenWeights[i + N_HIDDEN] += results->accumulators[BLACK][i] * loss;
     }
 
-    Square stmKing = entry.stm == WHITE ? board.wk : board.bk;
-    Square xstmKing = entry.stm == WHITE ? board.bk : board.wk;
-
     for (int i = 0; i < N_HIDDEN; i++) {
-      float stmLayerLoss = loss * nn->hiddenWeights[i] * (results->accumulators[entry.stm][i] > 0.0f);
-      float xstmLayerLoss = loss * nn->hiddenWeights[i + N_HIDDEN] * (results->accumulators[entry.stm ^ 1][i] > 0.0f);
+      float wLayerLoss = loss * nn->hiddenWeights[i] * (results->accumulators[WHITE][i] > 0.0f);
+      float bLayerLoss = loss * nn->hiddenWeights[i + N_HIDDEN] * (results->accumulators[BLACK][i] > 0.0f);
 
-      local[t].hiddenBias[i] += stmLayerLoss + xstmLayerLoss;
+      local[t].hiddenBias[i] += wLayerLoss + bLayerLoss;
 
       for (int j = 0; j < board.n; j++) {
-        Feature stmf = idx(board.pieces[j], stmKing, entry.stm);
-        local[t].featureWeights[stmf * N_HIDDEN + i] += stmLayerLoss;
+        if (wLayerLoss)
+          local[t].featureWeights[idx(board.pieces[j], board.wk, WHITE) * N_HIDDEN + i] += wLayerLoss;
 
-        Feature xstmf = idx(board.pieces[j], xstmKing, entry.stm ^ 1);
-        local[t].featureWeights[xstmf * N_HIDDEN + i] += xstmLayerLoss;
+        if (bLayerLoss)
+          local[t].featureWeights[idx(board.pieces[j], board.bk, BLACK) * N_HIDDEN + i] += bLayerLoss;
       }
     }
 
-    for (int j = 0; j < board.n; j++) {
-      Feature stmf = idx(board.pieces[j], stmKing, entry.stm);
-      local[t].skipWeights[stmf] += loss;
-    }
+    for (int j = 0; j < board.n; j++)
+      local[t].skipWeights[idx(board.pieces[j], board.wk, WHITE)] += loss;
   }
 
   for (int t = 0; t < THREADS; t++) {
