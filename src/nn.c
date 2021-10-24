@@ -11,7 +11,9 @@
 
 const int NETWORK_MAGIC = 'B' | 'R' << 8 | 'K' << 16 | 'R' << 24;
 
-void NNPredict(NN* nn, Board* board, NNActivations* results, int stm) {
+void NNPredict(NN* nn, Board* board, NNActivations* results) {
+  results->result = 0.0f;
+
   // Apply first layer
   memcpy(results->accumulators[WHITE], nn->hiddenBiases, sizeof(float) * N_HIDDEN);
   memcpy(results->accumulators[BLACK], nn->hiddenBiases, sizeof(float) * N_HIDDEN);
@@ -24,14 +26,16 @@ void NNPredict(NN* nn, Board* board, NNActivations* results, int stm) {
       results->accumulators[WHITE][j] += nn->featureWeights[wf * N_HIDDEN + j];
       results->accumulators[BLACK][j] += nn->featureWeights[bf * N_HIDDEN + j];
     }
+
+    results->result += nn->skipWeights[wf];
   }
 
-  ReLU(results->accumulators[stm], N_HIDDEN);
-  ReLU(results->accumulators[stm ^ 1], N_HIDDEN);
+  ReLU(results->accumulators[WHITE], N_HIDDEN);
+  ReLU(results->accumulators[BLACK], N_HIDDEN);
 
-  results->result = DotProduct(results->accumulators[stm], nn->hiddenWeights, N_HIDDEN) +
-                    DotProduct(results->accumulators[stm ^ 1], nn->hiddenWeights + N_HIDDEN, N_HIDDEN) + //
-                    nn->outputBias;
+  results->result += DotProduct(results->accumulators[WHITE], nn->hiddenWeights, N_HIDDEN) +
+                     DotProduct(results->accumulators[BLACK], nn->hiddenWeights + N_HIDDEN, N_HIDDEN) + //
+                     nn->outputBias;
 }
 
 NN* LoadNN(char* path) {
@@ -59,6 +63,7 @@ NN* LoadNN(char* path) {
   fread(nn->hiddenBiases, sizeof(float), N_HIDDEN, fp);
   fread(nn->hiddenWeights, sizeof(float), N_HIDDEN * 2, fp);
   fread(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
+  fread(nn->skipWeights, sizeof(float), N_FEATURES, fp);
 
   fclose(fp);
 
@@ -80,6 +85,9 @@ NN* LoadRandomNN() {
 
   nn->outputBias = Random(1);
 
+  for (int i = 0; i < N_FEATURES; i++)
+    nn->skipWeights[i] = Random(N_FEATURES);
+
   return nn;
 }
 
@@ -99,6 +107,7 @@ void SaveNN(NN* nn, char* path) {
   fwrite(nn->hiddenBiases, sizeof(float), N_HIDDEN, fp);
   fwrite(nn->hiddenWeights, sizeof(float), N_HIDDEN * 2, fp);
   fwrite(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
+  fwrite(nn->skipWeights, sizeof(float), N_FEATURES, fp);
 
   fclose(fp);
 }

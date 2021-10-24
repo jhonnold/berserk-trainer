@@ -6,7 +6,7 @@
 #include "types.h"
 #include "util.h"
 
-void NNPredict(NN* nn, Board* board, NNActivations* results, int stm);
+void NNPredict(NN* nn, Board* board, NNActivations* results);
 
 NN* LoadNN(char* path);
 NN* LoadRandomNN();

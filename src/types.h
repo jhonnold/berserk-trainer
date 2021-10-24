@@ -36,6 +36,7 @@ enum {
 
 enum { WHITE, BLACK };
 
+typedef uint8_t Color;
 typedef uint8_t Square;
 typedef uint8_t Piece;
 typedef uint16_t Feature;
@@ -48,11 +49,10 @@ typedef struct {
 typedef struct {
   int8_t n;
   Square wk, bk;
-  OccupiedSquare* pieces;
+  OccupiedSquare pieces[32];
 } Board;
 
 typedef struct {
-  int8_t stm;
   float wdl, eval;
   Board board;
 } DataEntry;
@@ -67,6 +67,7 @@ typedef struct {
   float featureWeights[N_FEATURES * N_HIDDEN] __attribute__((aligned(64)));
   float hiddenBiases[N_HIDDEN] __attribute__((aligned(64)));
   float hiddenWeights[N_HIDDEN * 2] __attribute__((aligned(64)));
+  float skipWeights[N_FEATURES] __attribute__((aligned(64)));
 } NN;
 
 typedef struct {
@@ -83,6 +84,7 @@ typedef struct {
   Gradient featureWeightGradients[N_FEATURES * N_HIDDEN];
   Gradient hiddenBiasGradients[N_HIDDEN];
   Gradient hiddenWeightGradients[N_HIDDEN * 2];
+  Gradient skipWeightGradients[N_FEATURES];
 } NNGradients;
 
 typedef struct {
@@ -90,6 +92,7 @@ typedef struct {
   float featureWeights[N_FEATURES * N_HIDDEN];
   float hiddenBias[N_HIDDEN];
   float hiddenWeights[N_HIDDEN * 2];
+  float skipWeights[N_FEATURES];
 } BatchGradients;
 
 extern const Piece charToPiece[];
