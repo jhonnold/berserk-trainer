@@ -57,6 +57,8 @@ int main(int argc, char** argv) {
   NNGradients* gradients = malloc(sizeof(NNGradients));
   ClearGradients(gradients);
 
+  BatchGradients* local = malloc(sizeof(BatchGradients) * THREADS);
+
   float error = TotalError(data, nn);
   printf("Starting Error: [%1.8f]\n", error);
 
@@ -68,7 +70,7 @@ int main(int argc, char** argv) {
 
     int batches = data->n / BATCH_SIZE;
     for (int b = 0; b < batches; b++) {
-      Train(b, data, nn, gradients);
+      Train(b, data, nn, gradients, local);
       ApplyGradients(nn, gradients);
 
       printf("Batch: [#%5d]\r", b + 1);
@@ -96,17 +98,16 @@ float TotalError(DataSet* data, NN* nn) {
   for (int i = 0; i < data->n; i++) {
     DataEntry entry = data->entries[i];
 
-    NNActivations results[1];
-    NNPredict(nn, &entry.board, results);
+    NNAccumulators acc[1];
+    NNPredict(nn, &entry.board, acc);
 
-    e += Error(Sigmoid(results->result), &entry);
+    e += Error(Sigmoid(acc->output), &entry);
   }
 
   return e / data->n;
 }
 
-void Train(int batch, DataSet* data, NN* nn, NNGradients* g) {
-  BatchGradients local[THREADS];
+void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* local) {
 #pragma omp parallel for schedule(auto) num_threads(THREADS)
   for (int t = 0; t < THREADS; t++)
     memset(&local[t], 0, sizeof(BatchGradients));
@@ -118,50 +119,74 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g) {
     DataEntry entry = data->entries[n + batch * BATCH_SIZE];
     Board board = entry.board;
 
-    NNActivations results[1];
-    NNPredict(nn, &board, results);
+    NNAccumulators acc[1];
+    NNPredict(nn, &board, acc);
 
-    float out = Sigmoid(results->result);
-    float loss = SigmoidPrime(out) * ErrorGradient(out, &entry);
+    float out = Sigmoid(acc->output);
 
-    local[t].outputBias += loss;
-    for (int i = 0; i < N_HIDDEN; i++) {
-      local[t].hiddenWeights[i] += results->accumulators[WHITE][i] * loss;
-      local[t].hiddenWeights[i + N_HIDDEN] += results->accumulators[BLACK][i] * loss;
-    }
+    // output loss
+    float outputLoss = SigmoidPrime(out) * ErrorGradient(out, &entry);
 
-    for (int i = 0; i < N_HIDDEN; i++) {
-      float wLayerLoss = loss * nn->hiddenWeights[i] * (results->accumulators[WHITE][i] > 0.0f);
-      float bLayerLoss = loss * nn->hiddenWeights[i + N_HIDDEN] * (results->accumulators[BLACK][i] > 0.0f);
+    // hidden layer losses
+    float hiddenLosses[N_HIDDEN_2] = {0};
+    for (int i = 0; i < N_HIDDEN_2; i++)
+      hiddenLosses[i] += (acc->hidden[i] > 0.0f) * outputLoss * nn->outputWeights[i];
 
-      local[t].hiddenBias[i] += wLayerLoss + bLayerLoss;
-
-      for (int j = 0; j < board.n; j++) {
-        if (wLayerLoss)
-          local[t].featureWeights[idx(board.pieces[j], board.wk, WHITE) * N_HIDDEN + i] += wLayerLoss;
-
-        if (bLayerLoss)
-          local[t].featureWeights[idx(board.pieces[j], board.bk, BLACK) * N_HIDDEN + i] += bLayerLoss;
+    // input layer losses
+    float inputLosses[2][N_HIDDEN] = {0};
+    for (int i = 0; i < N_HIDDEN; i++)
+      for (int j = 0; j < N_HIDDEN_2; j++) {
+        inputLosses[WHITE][i] += (acc->input[WHITE][i] > 0.0f && acc->input[WHITE][i] < 1.0f) * hiddenLosses[j] *
+                                 nn->hiddenWeights[2 * N_HIDDEN * j + i];
+        inputLosses[BLACK][i] += (acc->input[BLACK][i] > 0.0f && acc->input[BLACK][i] < 1.0f) * hiddenLosses[j] *
+                                 nn->hiddenWeights[2 * N_HIDDEN * j + N_HIDDEN + i];
       }
+
+    // input layer gradients
+    for (int i = 0; i < board.n; i++) {
+      for (int j = 0; j < N_HIDDEN; j++) {
+        local[t].inputWeights[idx(board.pieces[i], board.wk, WHITE) * N_HIDDEN + j] += inputLosses[WHITE][j];
+        local[t].inputWeights[idx(board.pieces[i], board.bk, BLACK) * N_HIDDEN + j] += inputLosses[BLACK][j];
+        local[t].inputBiases[j] += inputLosses[WHITE][j] + inputLosses[BLACK][j];
+      }
+
+      // skip weights get loss from output
+      local[t].skipWeights[idx(board.pieces[i], board.wk, WHITE)] += outputLoss;
     }
 
-    for (int j = 0; j < board.n; j++)
-      local[t].skipWeights[idx(board.pieces[j], board.wk, WHITE)] += loss;
+    // hidden layer gradients
+    for (int i = 0; i < N_HIDDEN; i++)
+      for (int j = 0; j < N_HIDDEN_2; j++) {
+        local[t].hiddenWeights[2 * N_HIDDEN * j + i] += hiddenLosses[j] * acc->input[WHITE][i];
+        local[t].hiddenWeights[2 * N_HIDDEN * j + i + N_HIDDEN] += hiddenLosses[j] * acc->input[BLACK][i];
+        local[t].hiddenBiases[j] += hiddenLosses[j];
+      }
+
+    // output layer gradients
+    for (int i = 0; i < N_HIDDEN_2; i++)
+      local[t].outputWeights[i] += outputLoss * acc->hidden[i];
+    local[t].outputBias += outputLoss;
   }
 
   for (int t = 0; t < THREADS; t++) {
-    for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
-      g->featureWeightGradients[i].g += local[t].featureWeights[i];
-
-    for (int i = 0; i < N_HIDDEN; i++)
-      g->hiddenBiasGradients[i].g += local[t].hiddenBias[i];
-
-    for (int i = 0; i < N_HIDDEN * 2; i++)
-      g->hiddenWeightGradients[i].g += local[t].hiddenWeights[i];
-
-    g->outputBiasGradient.g += local[t].outputBias;
-
     for (int i = 0; i < N_FEATURES; i++)
       g->skipWeightGradients[i].g += local[t].skipWeights[i];
+
+    for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
+      g->inputWeightGradients[i].g += local[t].inputWeights[i];
+
+    for (int i = 0; i < N_HIDDEN; i++)
+      g->inputBiasGradients[i].g += local[t].inputBiases[i];
+
+    for (int i = 0; i < 2 * N_HIDDEN * N_HIDDEN_2; i++)
+      g->hiddenWeightGradients[i].g += local[t].hiddenWeights[i];
+
+    for (int i = 0; i < N_HIDDEN_2; i++)
+      g->hiddenBiasGradients[i].g += local[t].hiddenBiases[i];
+
+    for (int i = 0; i < N_HIDDEN_2; i++)
+      g->outputWeightGradients[i].g += local[t].outputWeights[i];
+
+    g->outputBiasGradient.g += local[t].outputBias;
   }
 }

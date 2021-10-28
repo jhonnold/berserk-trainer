@@ -4,8 +4,9 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define N_FEATURES 3072
+#define N_FEATURES 1536
 #define N_HIDDEN 256
+#define N_HIDDEN_2 32
 #define N_OUTPUT 1
 
 #define THREADS 24
@@ -64,16 +65,23 @@ typedef struct {
 
 typedef struct {
   float outputBias;
-  float featureWeights[N_FEATURES * N_HIDDEN] __attribute__((aligned(64)));
-  float hiddenBiases[N_HIDDEN] __attribute__((aligned(64)));
-  float hiddenWeights[N_HIDDEN * 2] __attribute__((aligned(64)));
+  float outputWeights[N_HIDDEN_2] __attribute__((aligned(64)));
+
+  float hiddenBiases[N_HIDDEN_2] __attribute__((aligned(64)));
+  float hiddenWeights[2 * N_HIDDEN * N_HIDDEN_2] __attribute__((aligned(64)));
+
+  float inputBiases[N_HIDDEN] __attribute__((aligned(64)));
+  float inputWeights[N_FEATURES * N_HIDDEN] __attribute__((aligned(64)));
+
+  // weights that feed straight from the features -> output
   float skipWeights[N_FEATURES] __attribute__((aligned(64)));
 } NN;
 
 typedef struct {
-  float result;
-  float accumulators[2][N_HIDDEN] __attribute__((aligned(64)));
-} NNActivations;
+  float output;
+  float hidden[N_HIDDEN_2] __attribute__((aligned(64)));
+  float input[2][N_HIDDEN] __attribute__((aligned(64)));
+} NNAccumulators;
 
 typedef struct {
   float g, M, V;
@@ -81,17 +89,27 @@ typedef struct {
 
 typedef struct {
   Gradient outputBiasGradient;
-  Gradient featureWeightGradients[N_FEATURES * N_HIDDEN];
-  Gradient hiddenBiasGradients[N_HIDDEN];
-  Gradient hiddenWeightGradients[N_HIDDEN * 2];
+  Gradient outputWeightGradients[N_HIDDEN_2];
+
+  Gradient hiddenBiasGradients[N_HIDDEN_2];
+  Gradient hiddenWeightGradients[2 * N_HIDDEN * N_HIDDEN_2];
+
+  Gradient inputBiasGradients[N_HIDDEN];
+  Gradient inputWeightGradients[N_FEATURES * N_HIDDEN];
+
   Gradient skipWeightGradients[N_FEATURES];
 } NNGradients;
 
 typedef struct {
   float outputBias;
-  float featureWeights[N_FEATURES * N_HIDDEN];
-  float hiddenBias[N_HIDDEN];
-  float hiddenWeights[N_HIDDEN * 2];
+  float outputWeights[N_HIDDEN_2];
+
+  float hiddenBiases[N_HIDDEN_2];
+  float hiddenWeights[2 * N_HIDDEN * N_HIDDEN_2];
+
+  float inputBiases[N_HIDDEN];
+  float inputWeights[N_FEATURES * N_HIDDEN];
+
   float skipWeights[N_FEATURES];
 } BatchGradients;
 

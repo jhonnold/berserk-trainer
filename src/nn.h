@@ -6,11 +6,19 @@
 #include "types.h"
 #include "util.h"
 
-void NNPredict(NN* nn, Board* board, NNActivations* results);
+void NNPredict(NN* nn, Board* board, NNAccumulators* acc);
 
 NN* LoadNN(char* path);
 NN* LoadRandomNN();
 void SaveNN(NN* nn, char* path);
+
+INLINE void ClippedReLU(float* v, size_t n) {
+  const __m256 zero = _mm256_setzero_ps();
+  const __m256 one = _mm256_set1_ps(1.0f);
+
+  for (size_t j = 0; j < n; j += sizeof(__m256) / sizeof(float))
+    _mm256_store_ps(v + j, _mm256_min_ps(one, _mm256_max_ps(zero, _mm256_load_ps(v + j))));
+}
 
 INLINE void ReLU(float* v, size_t n) {
   const __m256 zero = _mm256_setzero_ps();
