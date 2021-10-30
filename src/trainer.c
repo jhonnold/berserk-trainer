@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
     }
 
     char buffer[64];
-    sprintf(buffer, "../nets/berserk-kq.e%d.%d.2x%d.nn", epoch, N_FEATURES, N_HIDDEN);
+    sprintf(buffer, "../nets/berserk-kq-kp.e%d.x%d.x%d.nn", epoch, N_HIDDEN, N_KP_HIDDEN);
     SaveNN(nn, buffer);
 
     printf("Calculating Error...\r");
@@ -125,9 +125,16 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g) {
     float loss = SigmoidPrime(out) * ErrorGradient(out, &entry);
 
     local[t].outputBias += loss;
+    local[t].kpOutputBias += loss;
+
     for (int i = 0; i < N_HIDDEN; i++) {
       local[t].hiddenWeights[i] += results->accumulators[WHITE][i] * loss;
       local[t].hiddenWeights[i + N_HIDDEN] += results->accumulators[BLACK][i] * loss;
+    }
+
+    for (int i = 0; i < N_KP_HIDDEN; i++) {
+      local[t].kpHiddenWeights[i] += results->kpAccumulators[WHITE][i] * loss;
+      local[t].kpHiddenWeights[i + N_KP_HIDDEN] += results->kpAccumulators[BLACK][i] * loss;
     }
 
     for (int i = 0; i < N_HIDDEN; i++) {
@@ -142,6 +149,25 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g) {
 
         if (bLayerLoss)
           local[t].featureWeights[idx(board.pieces[j], board.bk, BLACK) * N_HIDDEN + i] += bLayerLoss;
+      }
+    }
+
+    for (int i = 0; i < N_KP_HIDDEN; i++) {
+      float wLayerLoss = loss * nn->kpHiddenWeights[i] * (results->kpAccumulators[WHITE][i] > 0.0f);
+      float bLayerLoss = loss * nn->kpHiddenWeights[i + N_KP_HIDDEN] * (results->kpAccumulators[BLACK][i] > 0.0f);
+
+      local[t].kpHiddenBias[i] += wLayerLoss + bLayerLoss;
+
+      for (int j = 0; j < board.n; j++) {
+        OccupiedSquare occ = board.pieces[j];
+        if (occ.pc != WHITE_PAWN && occ.pc != BLACK_PAWN && occ.pc != WHITE_KING && occ.pc != BLACK_KING)
+          continue;
+
+        if (wLayerLoss)
+          local[t].kpFeatureWeights[kpIdx(occ, WHITE) * N_KP_HIDDEN + i] += wLayerLoss;
+
+        if (bLayerLoss)
+          local[t].kpFeatureWeights[kpIdx(occ, BLACK) * N_KP_HIDDEN + i] += bLayerLoss;
       }
     }
 
@@ -163,5 +189,16 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g) {
 
     for (int i = 0; i < N_FEATURES; i++)
       g->skipWeightGradients[i].g += local[t].skipWeights[i];
+
+    for (int i = 0; i < N_KP_FEATURES * N_KP_HIDDEN; i++)
+      g->kpFeatureWeightGradients[i].g += local[t].kpFeatureWeights[i];
+
+    for (int i = 0; i < N_KP_HIDDEN; i++)
+      g->kpHiddenBiasGradients[i].g += local[t].kpHiddenBias[i];
+
+    for (int i = 0; i < N_KP_HIDDEN * 2; i++)
+      g->kpHiddenWeightGradients[i].g += local[t].kpHiddenWeights[i];
+
+    g->kpOutputBiasGradient.g += local[t].kpOutputBias;
   }
 }

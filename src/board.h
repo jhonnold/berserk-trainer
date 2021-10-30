@@ -17,6 +17,13 @@ INLINE Feature idx(OccupiedSquare occ, Square king, const Color view) {
     return inv(occ.pc) * 256 + kIdx(mirror(king)) * 64 + mirror(occ.sq);
 }
 
+INLINE Feature kpIdx(OccupiedSquare occ, const Color view) {
+  if (view == WHITE)
+    return pieceToKP[WHITE][occ.pc] * 64 + occ.sq;
+  else
+    return pieceToKP[BLACK][occ.pc] * 64 + mirror(occ.sq);
+}
+
 void ParseFen(char* fen, Board* board, Color stm);
 
 #endif

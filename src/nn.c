@@ -18,24 +18,46 @@ void NNPredict(NN* nn, Board* board, NNActivations* results) {
   memcpy(results->accumulators[WHITE], nn->hiddenBiases, sizeof(float) * N_HIDDEN);
   memcpy(results->accumulators[BLACK], nn->hiddenBiases, sizeof(float) * N_HIDDEN);
 
+  memcpy(results->kpAccumulators[WHITE], nn->kpHiddenBiases, sizeof(float) * N_KP_HIDDEN);
+  memcpy(results->kpAccumulators[BLACK], nn->kpHiddenBiases, sizeof(float) * N_KP_HIDDEN);
+
   for (int i = 0; i < board->n; i++) {
-    Feature wf = idx(board->pieces[i], board->wk, WHITE);
-    Feature bf = idx(board->pieces[i], board->bk, BLACK);
+    OccupiedSquare occ = board->pieces[i];
+
+    Feature wf = idx(occ, board->wk, WHITE);
+    Feature bf = idx(occ, board->bk, BLACK);
+
+    results->result += nn->skipWeights[wf];
 
     for (size_t j = 0; j < N_HIDDEN; j++) {
       results->accumulators[WHITE][j] += nn->featureWeights[wf * N_HIDDEN + j];
       results->accumulators[BLACK][j] += nn->featureWeights[bf * N_HIDDEN + j];
     }
 
-    results->result += nn->skipWeights[wf];
+    if (occ.pc != WHITE_PAWN && occ.pc != BLACK_PAWN && occ.pc != WHITE_KING && occ.pc != BLACK_KING)
+      continue;
+
+    wf = kpIdx(occ, WHITE);
+    bf = kpIdx(occ, BLACK);
+
+    for (size_t j = 0; j < N_KP_HIDDEN; j++) {
+      results->kpAccumulators[WHITE][j] += nn->kpFeatureWeights[wf * N_KP_HIDDEN + j];
+      results->kpAccumulators[BLACK][j] += nn->kpFeatureWeights[bf * N_KP_HIDDEN + j];
+    }
   }
 
   ReLU(results->accumulators[WHITE], N_HIDDEN);
   ReLU(results->accumulators[BLACK], N_HIDDEN);
 
+  ReLU(results->kpAccumulators[WHITE], N_KP_HIDDEN);
+  ReLU(results->kpAccumulators[BLACK], N_KP_HIDDEN);
+
   results->result += DotProduct(results->accumulators[WHITE], nn->hiddenWeights, N_HIDDEN) +
-                     DotProduct(results->accumulators[BLACK], nn->hiddenWeights + N_HIDDEN, N_HIDDEN) + //
-                     nn->outputBias;
+                     DotProduct(results->accumulators[BLACK], nn->hiddenWeights + N_HIDDEN, N_HIDDEN) +         //
+                     nn->outputBias +                                                                           //
+                     DotProduct(results->kpAccumulators[WHITE], nn->hiddenWeights, N_KP_HIDDEN) +               //
+                     DotProduct(results->kpAccumulators[BLACK], nn->hiddenWeights + N_KP_HIDDEN, N_KP_HIDDEN) + //
+                     nn->kpOutputBias;
 }
 
 NN* LoadNN(char* path) {
@@ -63,7 +85,13 @@ NN* LoadNN(char* path) {
   fread(nn->hiddenBiases, sizeof(float), N_HIDDEN, fp);
   fread(nn->hiddenWeights, sizeof(float), N_HIDDEN * 2, fp);
   fread(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
+
   fread(nn->skipWeights, sizeof(float), N_FEATURES, fp);
+
+  fread(nn->kpFeatureWeights, sizeof(float), N_KP_FEATURES * N_KP_HIDDEN, fp);
+  fread(nn->kpHiddenBiases, sizeof(float), N_KP_HIDDEN, fp);
+  fread(nn->kpHiddenWeights, sizeof(float), N_KP_HIDDEN * 2, fp);
+  fread(&nn->kpOutputBias, sizeof(float), N_OUTPUT, fp);
 
   fclose(fp);
 
@@ -88,6 +116,17 @@ NN* LoadRandomNN() {
   for (int i = 0; i < N_FEATURES; i++)
     nn->skipWeights[i] = Random(N_FEATURES);
 
+  for (int i = 0; i < N_KP_FEATURES * N_KP_HIDDEN; i++)
+    nn->kpFeatureWeights[i] = Random(N_KP_FEATURES * N_KP_HIDDEN);
+
+  for (int i = 0; i < N_KP_HIDDEN; i++)
+    nn->kpHiddenBiases[i] = Random(N_KP_HIDDEN);
+
+  for (int i = 0; i < N_KP_HIDDEN * 2; i++)
+    nn->kpHiddenWeights[i] = Random(N_KP_HIDDEN * 2);
+
+  nn->kpOutputBias = Random(1);
+
   return nn;
 }
 
@@ -108,6 +147,10 @@ void SaveNN(NN* nn, char* path) {
   fwrite(nn->hiddenWeights, sizeof(float), N_HIDDEN * 2, fp);
   fwrite(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
   fwrite(nn->skipWeights, sizeof(float), N_FEATURES, fp);
+  fwrite(nn->kpFeatureWeights, sizeof(float), N_KP_FEATURES * N_KP_HIDDEN, fp);
+  fwrite(nn->kpHiddenBiases, sizeof(float), N_KP_HIDDEN, fp);
+  fwrite(nn->kpHiddenWeights, sizeof(float), N_KP_HIDDEN * 2, fp);
+  fwrite(&nn->kpOutputBias, sizeof(float), N_OUTPUT, fp);
 
   fclose(fp);
 }
