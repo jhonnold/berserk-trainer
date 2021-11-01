@@ -11,6 +11,22 @@
 
 const int NETWORK_MAGIC = 'B' | 'R' << 8 | 'K' << 16 | 'R' << 24;
 
+void NNFirstLayer(NN* nn, Board* board, NNActivations* results) {
+  // Apply first layer
+  memset(results->accumulators[WHITE], 0, sizeof(float) * N_HIDDEN);
+  memset(results->accumulators[BLACK], 0, sizeof(float) * N_HIDDEN);
+
+  for (int i = 0; i < board->n; i++) {
+    Feature wf = idx(board->pieces[i], board->wk, WHITE);
+    Feature bf = idx(board->pieces[i], board->bk, BLACK);
+
+    for (size_t j = 0; j < N_HIDDEN; j++) {
+      results->accumulators[WHITE][j] += nn->featureWeights[wf * N_HIDDEN + j];
+      results->accumulators[BLACK][j] += nn->featureWeights[bf * N_HIDDEN + j];
+    }
+  }
+}
+
 void NNPredict(NN* nn, Board* board, NNActivations* results) {
   results->result = 0.0f;
 
