@@ -6,6 +6,7 @@
 #include "types.h"
 #include "util.h"
 
+void NNFirstLayer(NN* nn, Board* board, NNActivations* results);
 void NNPredict(NN* nn, Board* board, NNActivations* results);
 
 NN* LoadNN(char* path);
