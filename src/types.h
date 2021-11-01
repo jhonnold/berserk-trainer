@@ -8,7 +8,7 @@
 #define N_HIDDEN 256
 #define N_OUTPUT 1
 
-#define THREADS 24
+#define THREADS 30
 #define BATCH_SIZE 16384
 
 #define ALPHA 0.01f
@@ -16,7 +16,7 @@
 #define BETA2 0.999f
 #define EPSILON 1e-8f
 
-#define MAX_POSITIONS 1000000000
+#define MAX_POSITIONS 750000000
 
 enum {
   WHITE_PAWN,

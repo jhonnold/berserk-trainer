@@ -57,6 +57,8 @@ int main(int argc, char** argv) {
   NNGradients* gradients = malloc(sizeof(NNGradients));
   ClearGradients(gradients);
 
+  BatchGradients* local = malloc(sizeof(BatchGradients) * THREADS);
+
   float error = TotalError(data, nn);
   printf("Starting Error: [%1.8f]\n", error);
 
@@ -68,14 +70,14 @@ int main(int argc, char** argv) {
 
     int batches = data->n / BATCH_SIZE;
     for (int b = 0; b < batches; b++) {
-      Train(b, data, nn, gradients);
+      Train(b, data, nn, gradients, local);
       ApplyGradients(nn, gradients);
 
       printf("Batch: [#%5d]\r", b + 1);
     }
 
     char buffer[64];
-    sprintf(buffer, "../nets/berserk-kq.e%d.%d.2x%d.nn", epoch, N_FEATURES, N_HIDDEN);
+    sprintf(buffer, "../nets/berserk-kq.e30.e%d.2x%d.nn", epoch, N_HIDDEN);
     SaveNN(nn, buffer);
 
     printf("Calculating Error...\r");
@@ -105,8 +107,7 @@ float TotalError(DataSet* data, NN* nn) {
   return e / data->n;
 }
 
-void Train(int batch, DataSet* data, NN* nn, NNGradients* g) {
-  BatchGradients local[THREADS];
+void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* local) {
 #pragma omp parallel for schedule(auto) num_threads(THREADS)
   for (int t = 0; t < THREADS; t++)
     memset(&local[t], 0, sizeof(BatchGradients));
@@ -150,6 +151,7 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g) {
   }
 
   for (int t = 0; t < THREADS; t++) {
+#pragma omp parallel for schedule(auto) num_threads(2)
     for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
       g->featureWeightGradients[i].g += local[t].featureWeights[i];
 

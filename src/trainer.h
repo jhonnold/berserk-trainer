@@ -5,7 +5,7 @@
 #include "util.h"
 
 float TotalError(DataSet* data, NN* nn);
-void Train(int batch, DataSet* data, NN* nn, NNGradients* g);
+void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* local);
 
 INLINE float Error(float r, DataEntry* e) { return (powf(r - e->wdl, 2) + powf(r - e->eval, 2)) / 2; }
 INLINE float ErrorGradient(float r, DataEntry* e) { return (r - e->wdl) + (r - e->eval); }
