@@ -8,14 +8,14 @@
 
 void ParseFen(char* fen, Board* board, Color stm) {
   char* _fen = fen;
-  
   int n = 0;
+
+  // Make sure the board is empty
+  for (int i = 0; i < 16; i++)
+    board->pieces[i] = 0;
 
   board->wk = INT8_MAX;
   board->bk = INT8_MAX;
-  
-  for (int i = 0; i < 16; i++)
-    board->pieces[i] = 0;
 
   for (Square sq = 0; sq < 64; sq++) {
     char c = *fen;
@@ -35,10 +35,7 @@ void ParseFen(char* fen, Board* board, Color stm) {
       }
 
       setBit(board->occupancies, stm == WHITE ? mirror(sq) : sq);
-
-      int idx = n / 2;
-      int shift = (n & 1) * 4;
-      board->pieces[idx] |= (stm == WHITE ? pc : inv(pc)) << shift;
+      board->pieces[n / 2] |= (stm == WHITE ? pc : inv(pc)) << ((n & 1) * 4);
 
       n++;
     } else if (c >= '1' && c <= '8')

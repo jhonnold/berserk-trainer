@@ -147,14 +147,10 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
       local[t].hiddenBias[i] += wLayerLoss + bLayerLoss;
 
       uint64_t bb = board.occupancies;
-      int n2 = 0;
+      int p = 0;
       while (bb) {
         Square sq = lsb(bb);
-
-        int j = n2 / 2;
-        int shift = (n2 & 1) * 4;
-
-        Piece pc = (board.pieces[j] >> shift) & 0xF;
+        Piece pc = getPiece(board.pieces, p++);
 
         if (wLayerLoss)
           local[t].featureWeights[idx(pc, sq, board.wk, WHITE) * N_HIDDEN + i] += wLayerLoss;
@@ -162,23 +158,18 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
         if (bLayerLoss)
           local[t].featureWeights[idx(pc, sq, board.bk, BLACK) * N_HIDDEN + i] += bLayerLoss;
 
-        n2++;
         popLsb(bb);
       }
     }
 
     uint64_t bb = board.occupancies;
-    int n2 = 0;
+    int p = 0;
     while (bb) {
       Square sq = lsb(bb);
+      Piece pc = getPiece(board.pieces, p++);
 
-      int i = n2 / 2;
-      int shift = (n2 & 1) * 4;
-
-      Piece pc = (board.pieces[i] >> shift) & 0xF;
       local[t].skipWeights[idx(pc, sq, board.wk, WHITE)] += loss;
 
-      n2++;
       popLsb(bb);
     }
   }
