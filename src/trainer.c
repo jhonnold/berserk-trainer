@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
     }
 
     char buffer[64];
-    sprintf(buffer, "../nets/berserk-kq.e30.e%d.2x%d.nn", epoch, N_HIDDEN);
+    sprintf(buffer, "../nets/berserk-kq.e%d.2x%d.nn", epoch, N_HIDDEN);
     SaveNN(nn, buffer);
 
     printf("Calculating Error...\r");
@@ -146,17 +146,41 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
 
       local[t].hiddenBias[i] += wLayerLoss + bLayerLoss;
 
-      for (int j = 0; j < board.n; j++) {
+      uint64_t bb = board.occupancies;
+      int n2 = 0;
+      while (bb) {
+        Square sq = lsb(bb);
+
+        int j = n2 / 2;
+        int shift = (n2 & 1) * 4;
+
+        Piece pc = (board.pieces[j] >> shift) & 0xF;
+
         if (wLayerLoss)
-          local[t].featureWeights[idx(board.pieces[j], board.wk, WHITE) * N_HIDDEN + i] += wLayerLoss;
+          local[t].featureWeights[idx(pc, sq, board.wk, WHITE) * N_HIDDEN + i] += wLayerLoss;
 
         if (bLayerLoss)
-          local[t].featureWeights[idx(board.pieces[j], board.bk, BLACK) * N_HIDDEN + i] += bLayerLoss;
+          local[t].featureWeights[idx(pc, sq, board.bk, BLACK) * N_HIDDEN + i] += bLayerLoss;
+
+        n2++;
+        popLsb(bb);
       }
     }
 
-    for (int j = 0; j < board.n; j++)
-      local[t].skipWeights[idx(board.pieces[j], board.wk, WHITE)] += loss;
+    uint64_t bb = board.occupancies;
+    int n2 = 0;
+    while (bb) {
+      Square sq = lsb(bb);
+
+      int i = n2 / 2;
+      int shift = (n2 & 1) * 4;
+
+      Piece pc = (board.pieces[i] >> shift) & 0xF;
+      local[t].skipWeights[idx(pc, sq, board.wk, WHITE)] += loss;
+
+      n2++;
+      popLsb(bb);
+    }
   }
 
   for (int t = 0; t < THREADS; t++) {

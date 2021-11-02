@@ -16,22 +16,21 @@
 #define BETA2 0.999f
 #define EPSILON 1e-8f
 
-#define MAX_POSITIONS 750000000
+#define MAX_POSITIONS 2000000000
 
 enum {
-  WHITE_PAWN,
-  WHITE_KNIGHT,
-  WHITE_BISHOP,
-  WHITE_ROOK,
-  WHITE_QUEEN,
-  WHITE_KING,
-  BLACK_PAWN,
-  BLACK_KNIGHT,
-  BLACK_BISHOP,
-  BLACK_ROOK,
-  BLACK_QUEEN,
-  BLACK_KING,
-  N_PIECES
+  WHITE_PAWN = 0,
+  WHITE_KNIGHT = 1,
+  WHITE_BISHOP = 2,
+  WHITE_ROOK = 3,
+  WHITE_QUEEN = 4,
+  WHITE_KING = 5,
+  BLACK_PAWN = 8,
+  BLACK_KNIGHT = 9,
+  BLACK_BISHOP = 10,
+  BLACK_ROOK = 11,
+  BLACK_QUEEN = 12,
+  BLACK_KING = 13
 };
 
 enum { WHITE, BLACK };
@@ -42,14 +41,9 @@ typedef uint8_t Piece;
 typedef uint16_t Feature;
 
 typedef struct {
-  Square sq;
-  Piece pc;
-} OccupiedSquare;
-
-typedef struct {
-  int8_t n;
-  Square wk, bk;
-  OccupiedSquare pieces[32];
+  int8_t wk, bk;
+  uint64_t occupancies;
+  uint8_t pieces[16];
 } Board;
 
 typedef struct {
@@ -97,6 +91,7 @@ typedef struct {
 
 extern const Piece charToPiece[];
 extern const Piece opposite[];
+extern const int8_t scalar[];
 extern const float SS;
 
 #endif

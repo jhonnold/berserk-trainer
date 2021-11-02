@@ -16,14 +16,26 @@ void NNFirstLayer(NN* nn, Board* board, NNActivations* results) {
   memset(results->accumulators[WHITE], 0, sizeof(float) * N_HIDDEN);
   memset(results->accumulators[BLACK], 0, sizeof(float) * N_HIDDEN);
 
-  for (int i = 0; i < board->n; i++) {
-    Feature wf = idx(board->pieces[i], board->wk, WHITE);
-    Feature bf = idx(board->pieces[i], board->bk, BLACK);
+  uint64_t bb = board->occupancies;
+  int n = 0;
+  while (bb) {
+    Square sq = lsb(bb);
+
+    int i = n / 2;
+    int shift = (n & 1) * 4;
+
+    Piece pc = (board->pieces[i] >> shift) & 0xF;
+
+    Feature wf = idx(pc, sq, board->wk, WHITE);
+    Feature bf = idx(pc, sq, board->bk, BLACK);
 
     for (size_t j = 0; j < N_HIDDEN; j++) {
       results->accumulators[WHITE][j] += nn->featureWeights[wf * N_HIDDEN + j];
       results->accumulators[BLACK][j] += nn->featureWeights[bf * N_HIDDEN + j];
     }
+
+    n++;
+    popLsb(bb);
   }
 }
 
@@ -34,9 +46,18 @@ void NNPredict(NN* nn, Board* board, NNActivations* results) {
   memcpy(results->accumulators[WHITE], nn->hiddenBiases, sizeof(float) * N_HIDDEN);
   memcpy(results->accumulators[BLACK], nn->hiddenBiases, sizeof(float) * N_HIDDEN);
 
-  for (int i = 0; i < board->n; i++) {
-    Feature wf = idx(board->pieces[i], board->wk, WHITE);
-    Feature bf = idx(board->pieces[i], board->bk, BLACK);
+  uint64_t bb = board->occupancies;
+  int n = 0;
+  while (bb) {
+    Square sq = lsb(bb);
+
+    int i = n / 2;
+    int shift = (n & 1) * 4;
+
+    Piece pc = (board->pieces[i] >> shift) & 0xF;
+
+    Feature wf = idx(pc, sq, board->wk, WHITE);
+    Feature bf = idx(pc, sq, board->bk, BLACK);
 
     for (size_t j = 0; j < N_HIDDEN; j++) {
       results->accumulators[WHITE][j] += nn->featureWeights[wf * N_HIDDEN + j];
@@ -44,6 +65,9 @@ void NNPredict(NN* nn, Board* board, NNActivations* results) {
     }
 
     results->result += nn->skipWeights[wf];
+
+    n++;
+    popLsb(bb);
   }
 
   ReLU(results->accumulators[WHITE], N_HIDDEN);
