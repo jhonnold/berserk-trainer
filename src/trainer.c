@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
   LoadEntries(entriesPath, data);
 
   if (s) {
-    PrintMinMax(data, 1000000, nn);
+    PrintMinMax(data, 10000000, nn);
     exit(0);
   }
 
@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
     }
 
     char buffer[64];
-    sprintf(buffer, "../nets/berserk-kq.e30.e%d.2x%d.nn", epoch, N_HIDDEN);
+    sprintf(buffer, "../nets/berserk-kq.e%d.2x%d.nn", epoch, N_HIDDEN);
     SaveNN(nn, buffer);
 
     printf("Calculating Error...\r");

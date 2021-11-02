@@ -7,12 +7,17 @@
 #include "util.h"
 
 INLINE void UpdateAndApplyGradient(float* v, Gradient* grad) {
+  grad->epoch++;
+
   if (!grad->g)
     return;
 
   grad->M = BETA1 * grad->M + (1.0 - BETA1) * grad->g;
   grad->V = BETA2 * grad->V + (1.0 - BETA2) * grad->g * grad->g;
-  float delta = ALPHA * grad->M / (sqrtf(grad->V) + EPSILON);
+
+  float mHat = grad->M / (1 - pow(BETA1, grad->epoch));
+  float vHat = grad->V / (1 - pow(BETA2, grad->epoch));
+  float delta = ALPHA * mHat / (sqrt(vHat) + EPSILON);
 
   *v -= delta;
 
@@ -44,7 +49,7 @@ INLINE void ClearGradients(NNGradients* gradients) {
   memset(gradients->hiddenBiasGradients, 0, sizeof(gradients->hiddenBiasGradients));
   memset(gradients->hiddenWeightGradients, 0, sizeof(gradients->hiddenWeightGradients));
   memset(gradients->skipWeightGradients, 0, sizeof(gradients->skipWeightGradients));
-  gradients->outputBiasGradient = (Gradient){.g = 0.0f, .M = 0.0f, .V = 0.0f};
+  gradients->outputBiasGradient = (Gradient){.epoch = 0, .g = 0.0f, .M = 0.0f, .V = 0.0f};
 }
 
 #endif
