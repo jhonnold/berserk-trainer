@@ -16,7 +16,7 @@
 #define BETA2 0.999f
 #define EPSILON 1e-8f
 
-#define MAX_POSITIONS 2000000000
+#define MAX_POSITIONS 1500000000
 
 enum {
   WHITE_PAWN,

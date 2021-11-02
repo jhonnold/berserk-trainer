@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
   LoadEntries(entriesPath, data);
 
   if (s) {
-    PrintMinMax(data, 1000000, nn);
+    PrintMinMax(data, data->n, nn);
     exit(0);
   }
 
