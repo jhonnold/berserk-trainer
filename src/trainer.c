@@ -136,15 +136,15 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
 
     local[t].outputBias += loss;
     for (int i = 0; i < N_HIDDEN; i++) {
-      local[t].hiddenWeights[i] += results->accumulators[WHITE][i] * loss;
-      local[t].hiddenWeights[i + N_HIDDEN] += results->accumulators[BLACK][i] * loss;
+      local[t].hiddenWeights[i] += results->accumulators[board.stm][i] * loss;
+      local[t].hiddenWeights[i + N_HIDDEN] += results->accumulators[board.stm ^ 1][i] * loss;
     }
 
     for (int i = 0; i < N_HIDDEN; i++) {
-      float wLayerLoss = loss * nn->hiddenWeights[i] * (results->accumulators[WHITE][i] > 0.0f);
-      float bLayerLoss = loss * nn->hiddenWeights[i + N_HIDDEN] * (results->accumulators[BLACK][i] > 0.0f);
+      float stmLayerLoss = loss * nn->hiddenWeights[i] * (results->accumulators[board.stm][i] > 0.0f);
+      float xStmLayerLoss = loss * nn->hiddenWeights[i + N_HIDDEN] * (results->accumulators[board.stm ^ 1][i] > 0.0f);
 
-      local[t].hiddenBias[i] += wLayerLoss + bLayerLoss;
+      local[t].hiddenBias[i] += stmLayerLoss + xStmLayerLoss;
 
       uint64_t bb = board.occupancies;
       int p = 0;
@@ -152,11 +152,12 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
         Square sq = lsb(bb);
         Piece pc = getPiece(board.pieces, p++);
 
-        if (wLayerLoss)
-          local[t].featureWeights[idx(pc, sq, board.wk, WHITE) * N_HIDDEN + i] += wLayerLoss;
+        if (stmLayerLoss)
+          local[t].featureWeights[idx(pc, sq, board.kings[board.stm], board.stm) * N_HIDDEN + i] += stmLayerLoss;
 
-        if (bLayerLoss)
-          local[t].featureWeights[idx(pc, sq, board.bk, BLACK) * N_HIDDEN + i] += bLayerLoss;
+        if (xStmLayerLoss)
+          local[t].featureWeights[idx(pc, sq, board.kings[board.stm ^ 1], board.stm ^ 1) * N_HIDDEN + i] +=
+              xStmLayerLoss;
 
         popLsb(bb);
       }
@@ -168,7 +169,7 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
       Square sq = lsb(bb);
       Piece pc = getPiece(board.pieces, p++);
 
-      local[t].skipWeights[idx(pc, sq, board.wk, WHITE)] += loss;
+      local[t].skipWeights[idx(pc, sq, board.kings[board.stm], board.stm)] += loss;
 
       popLsb(bb);
     }

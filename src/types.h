@@ -41,13 +41,15 @@ typedef uint8_t Piece;
 typedef uint16_t Feature;
 
 typedef struct {
-  int8_t wk, bk;
+  Color stm;
   uint64_t occupancies;
+  Square kings[2];
   uint8_t pieces[16];
 } Board;
 
 typedef struct {
-  float wdl, eval;
+  int8_t wdl;
+  float eval;
   Board board;
 } DataEntry;
 

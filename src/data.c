@@ -1,11 +1,13 @@
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-#include "random.h"
+
 #include "board.h"
 #include "data.h"
+#include "random.h"
 #include "util.h"
+
 
 void LoadEntries(char* path, DataSet* data) {
   FILE* fp = fopen(path, "r");
@@ -28,15 +30,15 @@ void LoadEntries(char* path, DataSet* data) {
 }
 
 void LoadDataEntry(char* buffer, DataEntry* result) {
-  Color stm = strstr(buffer, "w ") ? WHITE : BLACK;
-  ParseFen(buffer, &result->board, stm);
+  result->board.stm = strstr(buffer, "w ") ? WHITE : BLACK;
+  ParseFen(buffer, &result->board);
 
   if (strstr(buffer, "[1.0]"))
-    result->wdl = 1.0;
+    result->wdl = 2;
   else if (strstr(buffer, "[0.5]"))
-    result->wdl = 0.5;
+    result->wdl = 1;
   else if (strstr(buffer, "[0.0]"))
-    result->wdl = 0.0;
+    result->wdl = 0;
   else {
     printf("Cannot parse entry: %s!\n", buffer);
     exit(1);
@@ -44,10 +46,10 @@ void LoadDataEntry(char* buffer, DataEntry* result) {
 
   int eval = atoi(strstr(buffer, "] ") + 2);
   result->eval = Sigmoid(eval);
-  
+
   // Invert for black to move
-  if (stm == BLACK) {
-    result->wdl = 1 - result->wdl;
+  if (result->board.stm == BLACK) {
+    result->wdl = 2 - result->wdl;
     result->eval = 1 - result->eval;
   }
 }

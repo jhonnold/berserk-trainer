@@ -23,8 +23,8 @@ void NNFirstLayer(NN* nn, Board* board, NNActivations* results) {
     Square sq = lsb(bb);
     Piece pc = getPiece(board->pieces, p++);
 
-    Feature wf = idx(pc, sq, board->wk, WHITE);
-    Feature bf = idx(pc, sq, board->bk, BLACK);
+    Feature wf = idx(pc, sq, board->kings[WHITE], WHITE);
+    Feature bf = idx(pc, sq, board->kings[BLACK], BLACK);
 
     for (size_t j = 0; j < N_HIDDEN; j++) {
       results->accumulators[WHITE][j] += nn->featureWeights[wf * N_HIDDEN + j];
@@ -49,15 +49,15 @@ void NNPredict(NN* nn, Board* board, NNActivations* results) {
     Square sq = lsb(bb);
     Piece pc = getPiece(board->pieces, p++);
 
-    Feature wf = idx(pc, sq, board->wk, WHITE);
-    Feature bf = idx(pc, sq, board->bk, BLACK);
+    Feature wf = idx(pc, sq, board->kings[WHITE], WHITE);
+    Feature bf = idx(pc, sq, board->kings[BLACK], BLACK);
 
     for (size_t j = 0; j < N_HIDDEN; j++) {
       results->accumulators[WHITE][j] += nn->featureWeights[wf * N_HIDDEN + j];
       results->accumulators[BLACK][j] += nn->featureWeights[bf * N_HIDDEN + j];
     }
 
-    results->result += nn->skipWeights[wf];
+    results->result += nn->skipWeights[board->stm == WHITE ? wf : bf];
 
     popLsb(bb);
   }
@@ -65,8 +65,8 @@ void NNPredict(NN* nn, Board* board, NNActivations* results) {
   ReLU(results->accumulators[WHITE], N_HIDDEN);
   ReLU(results->accumulators[BLACK], N_HIDDEN);
 
-  results->result += DotProduct(results->accumulators[WHITE], nn->hiddenWeights, N_HIDDEN) +
-                     DotProduct(results->accumulators[BLACK], nn->hiddenWeights + N_HIDDEN, N_HIDDEN) + //
+  results->result += DotProduct(results->accumulators[board->stm], nn->hiddenWeights, N_HIDDEN) +
+                     DotProduct(results->accumulators[board->stm ^ 1], nn->hiddenWeights + N_HIDDEN, N_HIDDEN) + //
                      nn->outputBias;
 }
 
