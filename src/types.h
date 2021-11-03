@@ -4,11 +4,11 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define N_FEATURES 3072
-#define N_HIDDEN 256
+#define N_FEATURES 1536
+#define N_HIDDEN 512
 #define N_OUTPUT 1
 
-#define THREADS 30
+#define THREADS 32
 #define BATCH_SIZE 16384
 
 #define ALPHA 0.01f
@@ -42,8 +42,8 @@ typedef uint16_t Feature;
 
 typedef struct {
   Color stm;
-  uint64_t occupancies;
   Square kings[2];
+  uint64_t occupancies;
   uint8_t pieces[16];
 } Board;
 

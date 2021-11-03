@@ -12,6 +12,7 @@
 const int NETWORK_MAGIC = 'B' | 'R' << 8 | 'K' << 16 | 'R' << 24;
 
 void NNFirstLayer(NN* nn, Board* board, NNActivations* results) {
+
   // Apply first layer
   memset(results->accumulators[WHITE], 0, sizeof(float) * N_HIDDEN);
   memset(results->accumulators[BLACK], 0, sizeof(float) * N_HIDDEN);

@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
     }
 
     char buffer[64];
-    sprintf(buffer, "../nets/berserk-kq.e%d.2x%d.nn", epoch, N_HIDDEN);
+    sprintf(buffer, "../nets/berserk-ks.e%d.2x%d.nn", epoch, N_HIDDEN);
     SaveNN(nn, buffer);
 
     printf("Calculating Error...\r");
@@ -180,9 +180,11 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
       g->featureWeightGradients[i].g += local[t].featureWeights[i];
 
+#pragma omp parallel for schedule(auto) num_threads(2)
     for (int i = 0; i < N_HIDDEN; i++)
       g->hiddenBiasGradients[i].g += local[t].hiddenBias[i];
 
+#pragma omp parallel for schedule(auto) num_threads(2)
     for (int i = 0; i < N_HIDDEN * 2; i++)
       g->hiddenWeightGradients[i].g += local[t].hiddenWeights[i];
 
