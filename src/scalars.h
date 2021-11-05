@@ -19,11 +19,11 @@ INLINE void PrintMinMax(DataSet* data, int n, NN* nn) {
   float min = FLT_MAX, max = FLT_MIN;
 
   for (int i = 0; i < n; i++) {
-    NNActivations act[1];
+    NNAccumulators act[1];
     NNFirstLayer(nn, &data->entries[i].board, act);
 
-    MinAndMax(act->accumulators[WHITE], &min, &max);
-    MinAndMax(act->accumulators[BLACK], &min, &max);
+    MinAndMax(act->acc1[WHITE], &min, &max);
+    MinAndMax(act->acc1[BLACK], &min, &max);
   }
 
   printf("Min: %.4f, Max: %.4f\n", min, max);

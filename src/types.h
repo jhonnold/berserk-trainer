@@ -4,7 +4,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define N_FEATURES 1536
+#define N_INPUT 1536
 #define N_HIDDEN 512
 #define N_OUTPUT 1
 
@@ -60,35 +60,41 @@ typedef struct {
 
 typedef struct {
   float outputBias;
-  float featureWeights[N_FEATURES * N_HIDDEN] __attribute__((aligned(64)));
-  float hiddenBiases[N_HIDDEN] __attribute__((aligned(64)));
-  float hiddenWeights[N_HIDDEN * 2] __attribute__((aligned(64)));
-  float skipWeights[N_FEATURES] __attribute__((aligned(64)));
+  float outputWeights[2 * N_HIDDEN] __attribute__((aligned(64)));
+
+  float inputBiases[N_HIDDEN] __attribute__((aligned(64)));
+  float inputWeights[N_INPUT * N_HIDDEN] __attribute__((aligned(64)));
+
+  float skipWeights[N_INPUT] __attribute__((aligned(64)));
 } NN;
 
 typedef struct {
-  float result;
-  float accumulators[2][N_HIDDEN] __attribute__((aligned(64)));
-} NNActivations;
+  float output;
+  float acc1[2][N_HIDDEN] __attribute__((aligned(64)));
+} NNAccumulators;
 
 typedef struct {
   float g, M, V;
 } Gradient;
 
 typedef struct {
-  Gradient outputBiasGradient;
-  Gradient featureWeightGradients[N_FEATURES * N_HIDDEN];
-  Gradient hiddenBiasGradients[N_HIDDEN];
-  Gradient hiddenWeightGradients[N_HIDDEN * 2];
-  Gradient skipWeightGradients[N_FEATURES];
+  Gradient outputBias;
+  Gradient outputWeights[2 * N_HIDDEN];
+
+  Gradient inputBiases[N_HIDDEN];
+  Gradient inputWeights[N_INPUT * N_HIDDEN];
+
+  Gradient skipWeights[N_INPUT];
 } NNGradients;
 
 typedef struct {
   float outputBias;
-  float featureWeights[N_FEATURES * N_HIDDEN];
-  float hiddenBias[N_HIDDEN];
-  float hiddenWeights[N_HIDDEN * 2];
-  float skipWeights[N_FEATURES];
+  float outputWeights[2 * N_HIDDEN];
+
+  float inputBiases[N_HIDDEN];
+  float inputWeights[N_INPUT * N_HIDDEN];
+
+  float skipWeights[N_INPUT];
 } BatchGradients;
 
 extern const Piece charToPiece[];

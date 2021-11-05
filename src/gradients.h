@@ -21,30 +21,32 @@ INLINE void UpdateAndApplyGradient(float* v, Gradient* grad) {
 
 INLINE void ApplyGradients(NN* nn, NNGradients* g) {
 #pragma omp parallel for schedule(auto) num_threads(THREADS)
-  for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
-    UpdateAndApplyGradient(&nn->featureWeights[i], &g->featureWeightGradients[i]);
+  for (int i = 0; i < N_INPUT * N_HIDDEN; i++)
+    UpdateAndApplyGradient(&nn->inputWeights[i], &g->inputWeights[i]);
 
 #pragma omp parallel for schedule(auto) num_threads(THREADS)
   for (int i = 0; i < N_HIDDEN; i++)
-    UpdateAndApplyGradient(&nn->hiddenBiases[i], &g->hiddenBiasGradients[i]);
+    UpdateAndApplyGradient(&nn->inputBiases[i], &g->inputBiases[i]);
 
 #pragma omp parallel for schedule(auto) num_threads(THREADS)
   for (int i = 0; i < N_HIDDEN * 2; i++)
-    UpdateAndApplyGradient(&nn->hiddenWeights[i], &g->hiddenWeightGradients[i]);
+    UpdateAndApplyGradient(&nn->outputWeights[i], &g->outputWeights[i]);
 
-  UpdateAndApplyGradient(&nn->outputBias, &g->outputBiasGradient);
+  UpdateAndApplyGradient(&nn->outputBias, &g->outputBias);
 
 #pragma omp parallel for schedule(auto) num_threads(THREADS)
-  for (int i = 0; i < N_FEATURES; i++)
-    UpdateAndApplyGradient(&nn->skipWeights[i], &g->skipWeightGradients[i]);
+  for (int i = 0; i < N_INPUT; i++)
+    UpdateAndApplyGradient(&nn->skipWeights[i], &g->skipWeights[i]);
 }
 
 INLINE void ClearGradients(NNGradients* gradients) {
-  memset(gradients->featureWeightGradients, 0, sizeof(gradients->featureWeightGradients));
-  memset(gradients->hiddenBiasGradients, 0, sizeof(gradients->hiddenBiasGradients));
-  memset(gradients->hiddenWeightGradients, 0, sizeof(gradients->hiddenWeightGradients));
-  memset(gradients->skipWeightGradients, 0, sizeof(gradients->skipWeightGradients));
-  gradients->outputBiasGradient = (Gradient){.g = 0.0f, .M = 0.0f, .V = 0.0f};
+  memset(gradients->inputWeights, 0, sizeof(gradients->inputWeights));
+  memset(gradients->inputBiases, 0, sizeof(gradients->inputBiases));
+
+  memset(gradients->outputWeights, 0, sizeof(gradients->outputWeights));
+  gradients->outputBias = (Gradient){.g = 0.0f, .M = 0.0f, .V = 0.0f};
+
+  memset(gradients->skipWeights, 0, sizeof(gradients->skipWeights));
 }
 
 #endif
