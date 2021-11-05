@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
     }
 
     char buffer[64];
-    sprintf(buffer, "../nets/berserk-ks.e%d.2x%d.nn", epoch, N_HIDDEN);
+    sprintf(buffer, "../nets/berserk-ks.e%d.2x%d.x%d.x%d.nn", epoch, N_HIDDEN, N_HIDDEN_2, N_HIDDEN_3);
     SaveNN(nn, buffer);
 
     printf("Calculating Error...\r");
@@ -145,12 +145,12 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
       for (int j = 0; j < N_HIDDEN_3; j++)
         hidden2Losses[i] += hidden3Losses[j] * nn->h3Weights[j * N_HIDDEN_2 + i] * ReLUPrime(activations->acc2[i]);
 
-    float hiddenLosses[2][N_HIDDEN];
+    float hiddenLosses[2][N_HIDDEN] = {0};
     for (int i = 0; i < N_HIDDEN; i++) {
       for (int j = 0; j < N_HIDDEN_2; j++) {
-        hiddenLosses[board.stm][i] =
+        hiddenLosses[board.stm][i] +=
             hidden2Losses[j] * nn->h2Weights[j * 2 * N_HIDDEN + i] * ReLUPrime(activations->acc1[board.stm][i]);
-        hiddenLosses[board.stm ^ 1][i] = hidden2Losses[j] * nn->h2Weights[j * 2 * N_HIDDEN + i + N_HIDDEN] *
+        hiddenLosses[board.stm ^ 1][i] += hidden2Losses[j] * nn->h2Weights[j * 2 * N_HIDDEN + i + N_HIDDEN] *
                                          ReLUPrime(activations->acc1[board.stm ^ 1][i]);
       }
     }
