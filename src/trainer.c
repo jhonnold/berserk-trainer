@@ -136,19 +136,49 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     // LOSS CALCULATIONS ------------------------------------------------------------------------
     float outputLoss = SigmoidPrime(out) * ErrorGradient(out, &entry);
 
+    float hidden3Losses[N_HIDDEN_3];
+    for (int i = 0; i < N_HIDDEN_3; i++)
+      hidden3Losses[i] = outputLoss * nn->outputWeights[i] * ReLUPrime(activations->acc3[i]);
+
+    float hidden2Losses[N_HIDDEN_2] = {0};
+    for (int i = 0; i < N_HIDDEN_2; i++)
+      for (int j = 0; j < N_HIDDEN_3; j++)
+        hidden2Losses[i] += hidden3Losses[j] * nn->h3Weights[j * N_HIDDEN_2 + i] * ReLUPrime(activations->acc2[i]);
+
     float hiddenLosses[2][N_HIDDEN];
     for (int i = 0; i < N_HIDDEN; i++) {
-      hiddenLosses[board.stm][i] = outputLoss * nn->outputWeights[i] * ReLUPrime(activations->acc1[board.stm][i]);
-      hiddenLosses[board.stm ^ 1][i] =
-          outputLoss * nn->outputWeights[i + N_HIDDEN] * ReLUPrime(activations->acc1[board.stm ^ 1][i]);
+      for (int j = 0; j < N_HIDDEN_2; j++) {
+        hiddenLosses[board.stm][i] =
+            hidden2Losses[j] * nn->h2Weights[j * 2 * N_HIDDEN + i] * ReLUPrime(activations->acc1[board.stm][i]);
+        hiddenLosses[board.stm ^ 1][i] = hidden2Losses[j] * nn->h2Weights[j * 2 * N_HIDDEN + i + N_HIDDEN] *
+                                         ReLUPrime(activations->acc1[board.stm ^ 1][i]);
+      }
     }
     // ------------------------------------------------------------------------------------------
 
     // OUTPUT LAYER GRADIENTS -------------------------------------------------------------------
     local[t].outputBias += outputLoss;
-    for (int i = 0; i < N_HIDDEN; i++) {
-      local[t].outputWeights[i] += activations->acc1[board.stm][i] * outputLoss;
-      local[t].outputWeights[i + N_HIDDEN] += activations->acc1[board.stm ^ 1][i] * outputLoss;
+    for (int i = 0; i < N_HIDDEN_3; i++)
+      local[t].outputWeights[i] += activations->acc3[i] * outputLoss;
+    // ------------------------------------------------------------------------------------------
+
+    // THIRD LAYER GRADIENTS -------------------------------------------------------------------
+    for (int i = 0; i < N_HIDDEN_3; i++) {
+      local[t].h3Biases[i] += hidden3Losses[i];
+
+      for (int j = 0; j < N_HIDDEN_2; j++)
+        local[t].h3Weights[i * N_HIDDEN_2 + j] += activations->acc2[j] * hidden3Losses[i];
+    }
+    // ------------------------------------------------------------------------------------------
+
+    // SECOND LAYER GRADIENTS -------------------------------------------------------------------
+    for (int i = 0; i < N_HIDDEN_2; i++) {
+      local[t].h2Biases[i] += hidden2Losses[i];
+
+      for (int j = 0; j < N_HIDDEN; j++) {
+        local[t].h2Weights[i * 2 * N_HIDDEN + j] += activations->acc1[board.stm][j] * hidden2Losses[i];
+        local[t].h2Weights[i * 2 * N_HIDDEN + j + N_HIDDEN] += activations->acc1[board.stm ^ 1][j] * hidden2Losses[i];
+      }
     }
     // ------------------------------------------------------------------------------------------
 
@@ -192,12 +222,22 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     for (int i = 0; i < N_INPUT * N_HIDDEN; i++)
       g->inputWeights[i].g += local[t].inputWeights[i];
 
-#pragma omp parallel for schedule(auto) num_threads(2)
     for (int i = 0; i < N_HIDDEN; i++)
       g->inputBiases[i].g += local[t].inputBiases[i];
 
-#pragma omp parallel for schedule(auto) num_threads(2)
-    for (int i = 0; i < N_HIDDEN * 2; i++)
+    for (int i = 0; i < 2 * N_HIDDEN * N_HIDDEN_2; i++)
+      g->h2Weights[i].g += local[t].h2Weights[i];
+
+    for (int i = 0; i < N_HIDDEN_2; i++)
+      g->h2Biases[i].g += local[t].h2Biases[i];
+
+    for (int i = 0; i < N_HIDDEN_2 * N_HIDDEN_3; i++)
+      g->h3Weights[i].g += local[t].h3Weights[i];
+
+    for (int i = 0; i < N_HIDDEN_3; i++)
+      g->h3Biases[i].g += local[t].h3Biases[i];
+
+    for (int i = 0; i < N_HIDDEN_3; i++)
       g->outputWeights[i].g += local[t].outputWeights[i];
 
     g->outputBias.g += local[t].outputBias;

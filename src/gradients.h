@@ -29,7 +29,23 @@ INLINE void ApplyGradients(NN* nn, NNGradients* g) {
     UpdateAndApplyGradient(&nn->inputBiases[i], &g->inputBiases[i]);
 
 #pragma omp parallel for schedule(auto) num_threads(THREADS)
-  for (int i = 0; i < N_HIDDEN * 2; i++)
+  for (int i = 0; i < 2 * N_HIDDEN * N_HIDDEN_2; i++)
+    UpdateAndApplyGradient(&nn->h2Weights[i], &g->h2Weights[i]);
+
+#pragma omp parallel for schedule(auto) num_threads(THREADS)
+  for (int i = 0; i < N_HIDDEN_2; i++)
+    UpdateAndApplyGradient(&nn->h2Biases[i], &g->h2Biases[i]);
+
+#pragma omp parallel for schedule(auto) num_threads(THREADS)
+  for (int i = 0; i < N_HIDDEN_2 * N_HIDDEN_3; i++)
+    UpdateAndApplyGradient(&nn->h3Weights[i], &g->h3Weights[i]);
+
+#pragma omp parallel for schedule(auto) num_threads(THREADS)
+  for (int i = 0; i < N_HIDDEN_3; i++)
+    UpdateAndApplyGradient(&nn->h3Biases[i], &g->h3Biases[i]);
+
+#pragma omp parallel for schedule(auto) num_threads(THREADS)
+  for (int i = 0; i < N_HIDDEN_3; i++)
     UpdateAndApplyGradient(&nn->outputWeights[i], &g->outputWeights[i]);
 
   UpdateAndApplyGradient(&nn->outputBias, &g->outputBias);
