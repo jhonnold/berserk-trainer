@@ -218,7 +218,6 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
   }
 
   for (int t = 0; t < THREADS; t++) {
-#pragma omp parallel for schedule(auto) num_threads(2)
     for (int i = 0; i < N_INPUT * N_HIDDEN; i++)
       g->inputWeights[i].g += local[t].inputWeights[i];
 
