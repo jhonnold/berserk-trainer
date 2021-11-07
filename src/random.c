@@ -18,7 +18,7 @@ inline uint64_t RandomUInt64() {
 }
 
 void SeedRandom() {
-  keys[0] = keys[1] = time(NULL);
+  keys[0] = keys[1] = 0;
 
   for (int i = 0; i < 64; i++)
     RandomUInt64();
