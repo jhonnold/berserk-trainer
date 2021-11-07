@@ -146,7 +146,7 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
         hiddenLosses[board.stm][i] +=
             hidden2Losses[j] * nn->h2Weights[j * 2 * N_HIDDEN + i] * ReLUPrime(activations->acc1[board.stm][i]);
         hiddenLosses[board.stm ^ 1][i] += hidden2Losses[j] * nn->h2Weights[j * 2 * N_HIDDEN + i + N_HIDDEN] *
-                                         ReLUPrime(activations->acc1[board.stm ^ 1][i]);
+                                          ReLUPrime(activations->acc1[board.stm ^ 1][i]);
       }
     }
     // ------------------------------------------------------------------------------------------
@@ -159,6 +159,9 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
 
     // SECOND LAYER GRADIENTS -------------------------------------------------------------------
     for (int i = 0; i < N_HIDDEN_2; i++) {
+      if (!hidden2Losses[i])
+        continue;
+
       local[t].h2Biases[i] += hidden2Losses[i];
 
       for (int j = 0; j < N_HIDDEN; j++) {
@@ -169,24 +172,27 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     // ------------------------------------------------------------------------------------------
 
     // INPUT LAYER GRADIENTS --------------------------------------------------------------------
-    for (int i = 0; i < N_HIDDEN; i++)
+    for (int i = 0; i < N_HIDDEN; i++) {
+      if (!hiddenLosses[board.stm][i] && !hiddenLosses[board.stm ^ 1][i])
+        continue;
+
       local[t].inputBiases[i] += hiddenLosses[board.stm][i] + hiddenLosses[board.stm ^ 1][i];
 
-    uint64_t bb = board.occupancies;
-    int p = 0;
-    while (bb) {
-      Square sq = lsb(bb);
-      Piece pc = getPiece(board.pieces, p++);
+      uint64_t bb = board.occupancies;
+      int p = 0;
+      while (bb) {
+        Square sq = lsb(bb);
+        Piece pc = getPiece(board.pieces, p++);
 
-      for (int i = 0; i < N_HIDDEN; i++) {
         local[t].inputWeights[idx(pc, sq, board.kings[board.stm], board.stm) * N_HIDDEN + i] +=
             hiddenLosses[board.stm][i];
         local[t].inputWeights[idx(pc, sq, board.kings[board.stm ^ 1], board.stm ^ 1) * N_HIDDEN + i] +=
             hiddenLosses[board.stm ^ 1][i];
-      }
 
-      popLsb(bb);
+        popLsb(bb);
+      }
     }
+
     // ------------------------------------------------------------------------------------------
   }
 

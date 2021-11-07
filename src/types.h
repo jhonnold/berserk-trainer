@@ -5,12 +5,12 @@
 #include <stdbool.h>
 
 #define N_INPUT 1536
-#define N_HIDDEN 256
-#define N_HIDDEN_2 16
+#define N_HIDDEN 128
+#define N_HIDDEN_2 32
 #define N_OUTPUT 1
 
-#define THREADS 24
-#define BATCH_SIZE (THREADS * 128)
+#define THREADS 32
+#define BATCH_SIZE (THREADS * 1024)
 
 #define ALPHA 0.01f
 #define BETA1 0.9f
