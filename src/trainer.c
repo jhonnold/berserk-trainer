@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
     }
 
     char buffer[64];
-    sprintf(buffer, "../nets/berserk-ks.e%d.2x%d.nn", epoch, N_HIDDEN);
+    sprintf(buffer, "../nets/berserk-ks-b%d.e%d.2x%d.nn", N_BUCKETS, epoch, N_HIDDEN);
     SaveNN(nn, buffer);
 
     printf("Calculating Error...\r");
@@ -181,7 +181,7 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
       Square sq = lsb(bb);
       Piece pc = getPiece(board.pieces, p++);
 
-      local[t].skipWeights[b][idx(pc, sq, board.kings[board.stm], board.stm)] += outputLoss;
+      local[t].skipWeights[idx(pc, sq, board.kings[board.stm], board.stm)] += outputLoss;
 
       popLsb(bb);
     }
@@ -203,9 +203,9 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
         g->outputWeights[j][i].g += local[t].outputWeights[j][i];
 
       g->outputBias[j].g += local[t].outputBias[j];
-
-      for (int i = 0; i < N_INPUT; i++)
-        g->skipWeights[j][i].g += local[t].skipWeights[j][i];
     }
+
+    for (int i = 0; i < N_INPUT; i++)
+      g->skipWeights[i].g += local[t].skipWeights[i];
   }
 }

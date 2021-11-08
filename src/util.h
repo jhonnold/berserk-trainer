@@ -31,10 +31,10 @@ INLINE uint64_t NetworkHash(NN* nn) {
       hash = H(hash, (int)nn->outputWeights[b][i]);
 
     hash = H(hash, (int)nn->outputBias[b]);
-
-    for (int i = 0; i < N_INPUT; i++)
-      hash = H(hash, (int)nn->skipWeights[b][i]);
   }
+
+  for (int i = 0; i < N_INPUT; i++)
+    hash = H(hash, (int)nn->skipWeights[i]);
 
   return hash;
 }

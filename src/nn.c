@@ -45,7 +45,6 @@ void NNPredict(NN* nn, Board* board, NNAccumulators* results) {
 
   uint64_t bb = board->occupancies;
   int p = 0;
-  int b = bucket(bits(bb));
 
   while (bb) {
     Square sq = lsb(bb);
@@ -59,13 +58,15 @@ void NNPredict(NN* nn, Board* board, NNAccumulators* results) {
       results->acc1[BLACK][j] += nn->inputWeights[bf * N_HIDDEN + j];
     }
 
-    results->output += nn->skipWeights[b][board->stm == WHITE ? wf : bf];
+    results->output += nn->skipWeights[board->stm == WHITE ? wf : bf];
 
     popLsb(bb);
   }
 
   ReLU(results->acc1[WHITE], N_HIDDEN);
   ReLU(results->acc1[BLACK], N_HIDDEN);
+
+  int b = bucket(p);
 
   results->output += DotProduct(results->acc1[board->stm], nn->outputWeights[b], N_HIDDEN) +
                      DotProduct(results->acc1[board->stm ^ 1], nn->outputWeights[b] + N_HIDDEN, N_HIDDEN) + //
@@ -99,8 +100,9 @@ NN* LoadNN(char* path) {
   for (int i = 0; i < N_BUCKETS; i++) {
     fread(nn->outputWeights[i], sizeof(float), N_HIDDEN * 2, fp);
     fread(&nn->outputBias[i], sizeof(float), N_OUTPUT, fp);
-    fread(nn->skipWeights[i], sizeof(float), N_INPUT, fp);
   }
+
+  fread(nn->skipWeights, sizeof(float), N_INPUT, fp);
 
   fclose(fp);
 
@@ -122,10 +124,10 @@ NN* LoadRandomNN() {
       nn->outputWeights[b][i] = Random(N_HIDDEN * 2);
 
     nn->outputBias[b] = Random(1);
-
-    for (int i = 0; i < N_INPUT; i++)
-      nn->skipWeights[b][i] = Random(N_INPUT);
   }
+
+  for (int i = 0; i < N_INPUT; i++)
+    nn->skipWeights[i] = Random(N_INPUT);
 
   return nn;
 }
@@ -148,8 +150,9 @@ void SaveNN(NN* nn, char* path) {
   for (int i = 0; i < N_BUCKETS; i++) {
     fwrite(nn->outputWeights[i], sizeof(float), N_HIDDEN * 2, fp);
     fwrite(&nn->outputBias[i], sizeof(float), N_OUTPUT, fp);
-    fwrite(nn->skipWeights[i], sizeof(float), N_INPUT, fp);
   }
+
+  fwrite(nn->skipWeights, sizeof(float), N_INPUT, fp);
 
   fclose(fp);
 }
