@@ -9,7 +9,7 @@
 #define N_OUTPUT 1
 
 #define THREADS 32
-#define BATCH_SIZE 16384
+#define BATCH_SIZE (THREADS * 1024)
 
 #define ALPHA 0.01f
 #define BETA1 0.9f
