@@ -127,6 +127,7 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
 
     DataEntry entry = data->entries[n + batch * BATCH_SIZE];
     Board board = entry.board;
+    int b = bucket(bits(board.occupancies));
 
     NNAccumulators activations[1];
     NNPredict(nn, &board, activations);
@@ -138,17 +139,17 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
 
     float hiddenLosses[2][N_HIDDEN];
     for (int i = 0; i < N_HIDDEN; i++) {
-      hiddenLosses[board.stm][i] = outputLoss * nn->outputWeights[i] * ReLUPrime(activations->acc1[board.stm][i]);
+      hiddenLosses[board.stm][i] = outputLoss * nn->outputWeights[b][i] * ReLUPrime(activations->acc1[board.stm][i]);
       hiddenLosses[board.stm ^ 1][i] =
-          outputLoss * nn->outputWeights[i + N_HIDDEN] * ReLUPrime(activations->acc1[board.stm ^ 1][i]);
+          outputLoss * nn->outputWeights[b][i + N_HIDDEN] * ReLUPrime(activations->acc1[board.stm ^ 1][i]);
     }
     // ------------------------------------------------------------------------------------------
 
     // OUTPUT LAYER GRADIENTS -------------------------------------------------------------------
-    local[t].outputBias += outputLoss;
+    local[t].outputBias[b] += outputLoss;
     for (int i = 0; i < N_HIDDEN; i++) {
-      local[t].outputWeights[i] += activations->acc1[board.stm][i] * outputLoss;
-      local[t].outputWeights[i + N_HIDDEN] += activations->acc1[board.stm ^ 1][i] * outputLoss;
+      local[t].outputWeights[b][i] += activations->acc1[board.stm][i] * outputLoss;
+      local[t].outputWeights[b][i + N_HIDDEN] += activations->acc1[board.stm ^ 1][i] * outputLoss;
     }
     // ------------------------------------------------------------------------------------------
 
@@ -180,7 +181,7 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
       Square sq = lsb(bb);
       Piece pc = getPiece(board.pieces, p++);
 
-      local[t].skipWeights[idx(pc, sq, board.kings[board.stm], board.stm)] += outputLoss;
+      local[t].skipWeights[b][idx(pc, sq, board.kings[board.stm], board.stm)] += outputLoss;
 
       popLsb(bb);
     }
@@ -196,13 +197,15 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     for (int i = 0; i < N_HIDDEN; i++)
       g->inputBiases[i].g += local[t].inputBiases[i];
 
-#pragma omp parallel for schedule(auto) num_threads(2)
-    for (int i = 0; i < N_HIDDEN * 2; i++)
-      g->outputWeights[i].g += local[t].outputWeights[i];
+#pragma omp parallel for schedule(auto) num_threads(N_BUCKETS)
+    for (int j = 0; j < N_BUCKETS; j++) {
+      for (int i = 0; i < N_HIDDEN * 2; i++)
+        g->outputWeights[j][i].g += local[t].outputWeights[j][i];
 
-    g->outputBias.g += local[t].outputBias;
+      g->outputBias[j].g += local[t].outputBias[j];
 
-    for (int i = 0; i < N_INPUT; i++)
-      g->skipWeights[i].g += local[t].skipWeights[i];
+      for (int i = 0; i < N_INPUT; i++)
+        g->skipWeights[j][i].g += local[t].skipWeights[j][i];
+    }
   }
 }

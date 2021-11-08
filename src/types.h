@@ -8,7 +8,9 @@
 #define N_HIDDEN 512
 #define N_OUTPUT 1
 
-#define THREADS 32
+#define N_BUCKETS 4
+
+#define THREADS 8
 #define BATCH_SIZE (THREADS * 1024)
 
 #define ALPHA 0.01f
@@ -16,7 +18,7 @@
 #define BETA2 0.999f
 #define EPSILON 1e-8f
 
-#define MAX_POSITIONS 1500000000
+#define MAX_POSITIONS 10000000
 
 enum {
   WHITE_PAWN,
@@ -59,13 +61,13 @@ typedef struct {
 } DataSet;
 
 typedef struct {
-  float outputBias;
-  float outputWeights[2 * N_HIDDEN] __attribute__((aligned(64)));
+  float outputBias[N_BUCKETS];
+  float outputWeights[N_BUCKETS][2 * N_HIDDEN] __attribute__((aligned(64)));
 
   float inputBiases[N_HIDDEN] __attribute__((aligned(64)));
   float inputWeights[N_INPUT * N_HIDDEN] __attribute__((aligned(64)));
 
-  float skipWeights[N_INPUT] __attribute__((aligned(64)));
+  float skipWeights[N_BUCKETS][N_INPUT] __attribute__((aligned(64)));
 } NN;
 
 typedef struct {
@@ -78,23 +80,23 @@ typedef struct {
 } Gradient;
 
 typedef struct {
-  Gradient outputBias;
-  Gradient outputWeights[2 * N_HIDDEN];
+  Gradient outputBias[N_BUCKETS];
+  Gradient outputWeights[N_BUCKETS][2 * N_HIDDEN];
 
   Gradient inputBiases[N_HIDDEN];
   Gradient inputWeights[N_INPUT * N_HIDDEN];
 
-  Gradient skipWeights[N_INPUT];
+  Gradient skipWeights[N_BUCKETS][N_INPUT];
 } NNGradients;
 
 typedef struct {
-  float outputBias;
-  float outputWeights[2 * N_HIDDEN];
+  float outputBias[N_BUCKETS];
+  float outputWeights[N_BUCKETS][2 * N_HIDDEN];
 
   float inputBiases[N_HIDDEN];
   float inputWeights[N_INPUT * N_HIDDEN];
 
-  float skipWeights[N_INPUT];
+  float skipWeights[N_BUCKETS][N_INPUT];
 } BatchGradients;
 
 extern const Piece charToPiece[];

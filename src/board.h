@@ -17,9 +17,9 @@ INLINE Feature idx(Piece pc, Square sq, Square king, const Color view) {
     return inv(pc) * 128 + kIdx(king) * 64 + sq;
 }
 
-INLINE Piece getPiece(uint8_t pieces[16], int n) {
-  return (pieces[n / 2] >> ((n & 1) * 4)) & 0xF;
-}
+INLINE Piece getPiece(uint8_t pieces[16], int n) { return (pieces[n / 2] >> ((n & 1) * 4)) & 0xF; }
+
+INLINE int bucket(int pieceCount) { return (pieceCount - 1) / 8; }
 
 void ParseFen(char* fen, Board* board);
 
