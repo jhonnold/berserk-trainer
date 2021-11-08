@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
   LoadEntries(entriesPath, data);
 
   if (s) {
-    PrintMinMax(data, 1000000, nn);
+    PrintMinMax(data, data->n, nn);
     exit(0);
   }
 
@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
     }
 
     char buffer[64];
-    sprintf(buffer, "../nets/berserk-kq.e30.e%d.2x%d.nn", epoch, N_HIDDEN);
+    sprintf(buffer, "../nets/berserk-ks.e%d.2x%d.nn", epoch, N_HIDDEN);
     SaveNN(nn, buffer);
 
     printf("Calculating Error...\r");
@@ -107,10 +107,10 @@ float TotalError(DataSet* data, NN* nn) {
   for (int i = 0; i < data->n; i++) {
     DataEntry entry = data->entries[i];
 
-    NNActivations results[1];
+    NNAccumulators results[1];
     NNPredict(nn, &entry.board, results);
 
-    e += Error(Sigmoid(results->result), &entry);
+    e += Error(Sigmoid(results->output), &entry);
   }
 
   return e / data->n;
@@ -128,51 +128,81 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     DataEntry entry = data->entries[n + batch * BATCH_SIZE];
     Board board = entry.board;
 
-    NNActivations results[1];
-    NNPredict(nn, &board, results);
+    NNAccumulators activations[1];
+    NNPredict(nn, &board, activations);
 
-    float out = Sigmoid(results->result);
-    float loss = SigmoidPrime(out) * ErrorGradient(out, &entry);
+    float out = Sigmoid(activations->output);
 
-    local[t].outputBias += loss;
+    // LOSS CALCULATIONS ------------------------------------------------------------------------
+    float outputLoss = SigmoidPrime(out) * ErrorGradient(out, &entry);
+
+    float hiddenLosses[2][N_HIDDEN];
     for (int i = 0; i < N_HIDDEN; i++) {
-      local[t].hiddenWeights[i] += results->accumulators[WHITE][i] * loss;
-      local[t].hiddenWeights[i + N_HIDDEN] += results->accumulators[BLACK][i] * loss;
+      hiddenLosses[board.stm][i] = outputLoss * nn->outputWeights[i] * ReLUPrime(activations->acc1[board.stm][i]);
+      hiddenLosses[board.stm ^ 1][i] =
+          outputLoss * nn->outputWeights[i + N_HIDDEN] * ReLUPrime(activations->acc1[board.stm ^ 1][i]);
     }
+    // ------------------------------------------------------------------------------------------
 
+    // OUTPUT LAYER GRADIENTS -------------------------------------------------------------------
+    local[t].outputBias += outputLoss;
     for (int i = 0; i < N_HIDDEN; i++) {
-      float wLayerLoss = loss * nn->hiddenWeights[i] * (results->accumulators[WHITE][i] > 0.0f);
-      float bLayerLoss = loss * nn->hiddenWeights[i + N_HIDDEN] * (results->accumulators[BLACK][i] > 0.0f);
+      local[t].outputWeights[i] += activations->acc1[board.stm][i] * outputLoss;
+      local[t].outputWeights[i + N_HIDDEN] += activations->acc1[board.stm ^ 1][i] * outputLoss;
+    }
+    // ------------------------------------------------------------------------------------------
 
-      local[t].hiddenBias[i] += wLayerLoss + bLayerLoss;
+    // INPUT LAYER GRADIENTS --------------------------------------------------------------------
+    for (int i = 0; i < N_HIDDEN; i++)
+      local[t].inputBiases[i] += hiddenLosses[board.stm][i] + hiddenLosses[board.stm ^ 1][i];
 
-      for (int j = 0; j < board.n; j++) {
-        if (wLayerLoss)
-          local[t].featureWeights[idx(board.pieces[j], board.wk, WHITE) * N_HIDDEN + i] += wLayerLoss;
+    uint64_t bb = board.occupancies;
+    int p = 0;
+    while (bb) {
+      Square sq = lsb(bb);
+      Piece pc = getPiece(board.pieces, p++);
 
-        if (bLayerLoss)
-          local[t].featureWeights[idx(board.pieces[j], board.bk, BLACK) * N_HIDDEN + i] += bLayerLoss;
+      for (int i = 0; i < N_HIDDEN; i++) {
+        local[t].inputWeights[idx(pc, sq, board.kings[board.stm], board.stm) * N_HIDDEN + i] +=
+            hiddenLosses[board.stm][i];
+        local[t].inputWeights[idx(pc, sq, board.kings[board.stm ^ 1], board.stm ^ 1) * N_HIDDEN + i] +=
+            hiddenLosses[board.stm ^ 1][i];
       }
-    }
 
-    for (int j = 0; j < board.n; j++)
-      local[t].skipWeights[idx(board.pieces[j], board.wk, WHITE)] += loss;
+      popLsb(bb);
+    }
+    // ------------------------------------------------------------------------------------------
+
+    // SKIP CONNECTION GRADIENTS ----------------------------------------------------------------
+    bb = board.occupancies;
+    p = 0;
+    while (bb) {
+      Square sq = lsb(bb);
+      Piece pc = getPiece(board.pieces, p++);
+
+      local[t].skipWeights[idx(pc, sq, board.kings[board.stm], board.stm)] += outputLoss;
+
+      popLsb(bb);
+    }
+    // ------------------------------------------------------------------------------------------
   }
 
   for (int t = 0; t < THREADS; t++) {
 #pragma omp parallel for schedule(auto) num_threads(2)
-    for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
-      g->featureWeightGradients[i].g += local[t].featureWeights[i];
+    for (int i = 0; i < N_INPUT * N_HIDDEN; i++)
+      g->inputWeights[i].g += local[t].inputWeights[i];
 
+#pragma omp parallel for schedule(auto) num_threads(2)
     for (int i = 0; i < N_HIDDEN; i++)
-      g->hiddenBiasGradients[i].g += local[t].hiddenBias[i];
+      g->inputBiases[i].g += local[t].inputBiases[i];
 
+#pragma omp parallel for schedule(auto) num_threads(2)
     for (int i = 0; i < N_HIDDEN * 2; i++)
-      g->hiddenWeightGradients[i].g += local[t].hiddenWeights[i];
+      g->outputWeights[i].g += local[t].outputWeights[i];
 
-    g->outputBiasGradient.g += local[t].outputBias;
+    g->outputBias.g += local[t].outputBias;
 
-    for (int i = 0; i < N_FEATURES; i++)
-      g->skipWeightGradients[i].g += local[t].skipWeights[i];
+    for (int i = 0; i < N_INPUT; i++)
+      g->skipWeights[i].g += local[t].skipWeights[i];
   }
 }

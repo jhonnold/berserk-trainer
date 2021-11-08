@@ -3,36 +3,35 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "bits.h"
 #include "board.h"
 
-void ParseFen(char* fen, Board* board, Color stm) {
+void ParseFen(char* fen, Board* board) {
   char* _fen = fen;
+  int n = 0;
 
-  board->n = 0;
-  board->wk = INT8_MAX;
-  board->bk = INT8_MAX;
+  // Make sure the board is empty
+  board->occupancies = 0;
+  for (int i = 0; i < 16; i++)
+    board->pieces[i] = 0;
+
+  board->kings[WHITE] = INT8_MAX;
+  board->kings[BLACK] = INT8_MAX;
 
   for (Square sq = 0; sq < 64; sq++) {
     char c = *fen;
     if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
       Piece pc = charToPiece[(int)*fen];
 
-      if (c == 'k') {
-        if (stm == WHITE)
-          board->bk = mirror(sq);
-        else
-          board->wk = sq;
-      } else if (c == 'K') {
-        if (stm == WHITE)
-          board->wk = mirror(sq);
-        else
-          board->bk = sq;
-      }
+      if (c == 'K')
+        board->kings[WHITE] = sq;
+      else if (c == 'k')
+        board->kings[BLACK] = sq;
 
-      board->pieces[board->n].pc = stm == WHITE ? pc : inv(pc);
-      board->pieces[board->n].sq = stm == WHITE ? mirror(sq) : sq;
+      setBit(board->occupancies, sq);
+      board->pieces[n / 2] |= pc << ((n & 1) * 4);
 
-      board->n++;
+      n++;
     } else if (c >= '1' && c <= '8')
       sq += (c - '1');
     else if (c == '/')
@@ -45,7 +44,7 @@ void ParseFen(char* fen, Board* board, Color stm) {
     fen++;
   }
 
-  if (board->wk == INT8_MAX || board->bk == INT8_MAX) {
+  if (board->kings[WHITE] == INT8_MAX || board->kings[BLACK] == INT8_MAX) {
     printf("Unable to locate kings in FEN: %s!\n", _fen);
     exit(1);
   }
