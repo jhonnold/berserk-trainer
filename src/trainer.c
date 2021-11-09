@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
     }
 
     char buffer[64];
-    sprintf(buffer, "../nets/berserk-ks.e%d.2x%d.nn", epoch, N_HIDDEN);
+    sprintf(buffer, "../nets/berserk-kf.e%d.2x%d.nn", epoch, N_HIDDEN);
     SaveNN(nn, buffer);
 
     printf("Calculating Error...\r");
