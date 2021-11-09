@@ -1,4 +1,4 @@
-CC = gcc
+CC = gcc-11
 SRC = *.c
 EXE = trainer
 

@@ -8,9 +8,9 @@
 #define N_HIDDEN 512
 #define N_OUTPUT 1
 
-#define N_BUCKETS 4
+#define N_BUCKETS 2
 
-#define THREADS 8
+#define THREADS 2
 #define BATCH_SIZE (THREADS * 1024)
 
 #define ALPHA 0.01f
