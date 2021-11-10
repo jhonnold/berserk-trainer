@@ -16,7 +16,7 @@
 #define BETA2 0.999f
 #define EPSILON 1e-8f
 
-#define MAX_POSITIONS 1500000000
+#define MAX_POSITIONS 15000000
 
 enum {
   WHITE_PAWN,
@@ -46,6 +46,11 @@ typedef struct {
   uint64_t occupancies;
   uint8_t pieces[16];
 } Board;
+
+typedef struct {
+  int8_t n;
+  Feature features[2][32];
+} Features;
 
 typedef struct {
   int8_t wdl;

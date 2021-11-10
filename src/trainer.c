@@ -99,7 +99,10 @@ float TotalError(DataSet* data, NN* nn) {
     DataEntry entry = data->entries[i];
 
     NNAccumulators results[1];
-    NNPredict(nn, &entry.board, results);
+    Features f[1];
+
+    ToFeatures(&entry.board, f);
+    NNPredict(nn, f, entry.board.stm, results);
 
     e += Error(Sigmoid(results->output), &entry);
   }
@@ -120,7 +123,10 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     Board board = entry.board;
 
     NNAccumulators activations[1];
-    NNPredict(nn, &board, activations);
+    Features f[1];
+
+    ToFeatures(&board, f);
+    NNPredict(nn, f, board.stm, activations);
 
     float out = Sigmoid(activations->output);
 
@@ -147,33 +153,18 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     for (int i = 0; i < N_HIDDEN; i++)
       local[t].inputBiases[i] += hiddenLosses[board.stm][i] + hiddenLosses[board.stm ^ 1][i];
 
-    uint64_t bb = board.occupancies;
-    int p = 0;
-    while (bb) {
-      Square sq = lsb(bb);
-      Piece pc = getPiece(board.pieces, p++);
-
-      for (int i = 0; i < N_HIDDEN; i++) {
-        local[t].inputWeights[idx(pc, sq, board.kings[board.stm], board.stm) * N_HIDDEN + i] +=
-            hiddenLosses[board.stm][i];
-        local[t].inputWeights[idx(pc, sq, board.kings[board.stm ^ 1], board.stm ^ 1) * N_HIDDEN + i] +=
-            hiddenLosses[board.stm ^ 1][i];
+    for (int i = 0; i < f->n; i++) {
+      for (int j = 0; j < N_HIDDEN; j++) {
+        local[t].inputWeights[f->features[board.stm][i] * N_HIDDEN + j] += hiddenLosses[board.stm][j];
+        local[t].inputWeights[f->features[board.stm ^ 1][i] * N_HIDDEN + j] += hiddenLosses[board.stm ^ 1][j];
       }
-
-      popLsb(bb);
     }
     // ------------------------------------------------------------------------------------------
 
     // SKIP CONNECTION GRADIENTS ----------------------------------------------------------------
-    bb = board.occupancies;
-    p = 0;
-    while (bb) {
-      Square sq = lsb(bb);
-      Piece pc = getPiece(board.pieces, p++);
-
-      local[t].skipWeights[idx(pc, sq, board.kings[board.stm], board.stm)] += outputLoss;
-
-      popLsb(bb);
+    for (int i = 0; i < f->n; i++) {
+      local[t].skipWeights[f->features[board.stm][i]] += outputLoss;
+      local[t].skipWeights[f->features[board.stm ^ 1][i]] += outputLoss;
     }
     // ------------------------------------------------------------------------------------------
   }

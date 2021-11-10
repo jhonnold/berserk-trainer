@@ -6,6 +6,22 @@
 #include "bits.h"
 #include "board.h"
 
+void ToFeatures(Board* board, Features* f) {
+  f->n = 0;
+
+  uint64_t bb = board->occupancies;
+
+  while (bb) {
+    Square sq = popLsb(&bb);
+    Piece pc = getPiece(board->pieces, f->n);
+
+    f->features[WHITE][f->n] = idx(pc, sq, board->kings[WHITE], WHITE);
+    f->features[BLACK][f->n] = idx(pc, sq, board->kings[BLACK], BLACK);
+
+    f->n++;
+  }
+}
+
 void ParseFen(char* fen, Board* board) {
   char* _fen = fen;
   int n = 0;

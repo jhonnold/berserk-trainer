@@ -6,8 +6,7 @@
 #include "types.h"
 #include "util.h"
 
-void NNFirstLayer(NN* nn, Board* board, NNAccumulators* results);
-void NNPredict(NN* nn, Board* board, NNAccumulators* results);
+void NNPredict(NN* nn, Features* f, Color stm, NNAccumulators* results);
 
 NN* LoadNN(char* path);
 NN* LoadRandomNN();

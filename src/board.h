@@ -21,6 +21,7 @@ INLINE Piece getPiece(uint8_t pieces[16], int n) {
   return (pieces[n / 2] >> ((n & 1) * 4)) & 0xF;
 }
 
+void ToFeatures(Board* board, Features* f);
 void ParseFen(char* fen, Board* board);
 
 #endif
