@@ -9,14 +9,13 @@
 #include "gradients.h"
 #include "nn.h"
 #include "random.h"
-#include "scalars.h"
 #include "trainer.h"
 #include "util.h"
 
 int main(int argc, char** argv) {
   SeedRandom();
 
-  int c, s = 0;
+  int c;
 
   char nnPath[128] = {0};
   char entriesPath[128] = {0};
@@ -28,9 +27,6 @@ int main(int argc, char** argv) {
       break;
     case 'n':
       strcpy(nnPath, optarg);
-      break;
-    case 's':
-      s = 1;
       break;
     case '?':
       return 1;
@@ -57,11 +53,6 @@ int main(int argc, char** argv) {
   data->n = 0;
   data->entries = malloc(sizeof(DataEntry) * MAX_POSITIONS);
   LoadEntries(entriesPath, data);
-
-  if (s) {
-    PrintMinMax(data, data->n, nn);
-    exit(0);
-  }
 
   NNGradients* gradients = malloc(sizeof(NNGradients));
   ClearGradients(gradients);
@@ -107,8 +98,11 @@ float TotalError(DataSet* data, NN* nn) {
   for (int i = 0; i < data->n; i++) {
     DataEntry entry = data->entries[i];
 
+    Features features[1];
     NNAccumulators results[1];
-    NNPredict(nn, &entry.board, results);
+
+    ToFeatures(&entry.board, features);
+    NNPredict(nn, features, entry.board.stm, results);
 
     e += Error(Sigmoid(results->output), &entry);
   }
@@ -128,8 +122,11 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     DataEntry entry = data->entries[n + batch * BATCH_SIZE];
     Board board = entry.board;
 
+    Features features[1];
     NNAccumulators activations[1];
-    NNPredict(nn, &board, activations);
+
+    ToFeatures(&board, features);
+    NNPredict(nn, features, board.stm, activations);
 
     float out = Sigmoid(activations->output);
 
@@ -156,33 +153,11 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     for (int i = 0; i < N_HIDDEN; i++)
       local[t].inputBiases[i] += hiddenLosses[board.stm][i] + hiddenLosses[board.stm ^ 1][i];
 
-    uint64_t bb = board.occupancies;
-    int p = 0;
-    while (bb) {
-      Square sq = lsb(bb);
-      Piece pc = getPiece(board.pieces, p++);
-
+    for (int j = 0; j < features->n; j++) {
       for (int i = 0; i < N_HIDDEN; i++) {
-        local[t].inputWeights[idx(pc, sq, board.kings[board.stm], board.stm) * N_HIDDEN + i] +=
-            hiddenLosses[board.stm][i];
-        local[t].inputWeights[idx(pc, sq, board.kings[board.stm ^ 1], board.stm ^ 1) * N_HIDDEN + i] +=
-            hiddenLosses[board.stm ^ 1][i];
+        local[t].inputWeights[features->features[board.stm][j] * N_HIDDEN + i] += hiddenLosses[board.stm][i];
+        local[t].inputWeights[features->features[board.stm ^ 1][j] * N_HIDDEN + i] += hiddenLosses[board.stm ^ 1][i];
       }
-
-      popLsb(bb);
-    }
-    // ------------------------------------------------------------------------------------------
-
-    // SKIP CONNECTION GRADIENTS ----------------------------------------------------------------
-    bb = board.occupancies;
-    p = 0;
-    while (bb) {
-      Square sq = lsb(bb);
-      Piece pc = getPiece(board.pieces, p++);
-
-      local[t].skipWeights[idx(pc, sq, board.kings[board.stm], board.stm)] += outputLoss;
-
-      popLsb(bb);
     }
     // ------------------------------------------------------------------------------------------
   }
@@ -201,8 +176,5 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
       g->outputWeights[i].g += local[t].outputWeights[i];
 
     g->outputBias.g += local[t].outputBias;
-
-    for (int i = 0; i < N_INPUT; i++)
-      g->skipWeights[i].g += local[t].skipWeights[i];
   }
 }

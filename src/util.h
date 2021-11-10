@@ -31,9 +31,6 @@ INLINE uint64_t NetworkHash(NN* nn) {
 
   hash = H(hash, (int)nn->outputBias);
 
-  for (int i = 0; i < N_INPUT; i++)
-    hash = H(hash, (int)nn->skipWeights[i]);
-
   return hash;
 }
 
