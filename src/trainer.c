@@ -9,14 +9,13 @@
 #include "gradients.h"
 #include "nn.h"
 #include "random.h"
-#include "scalars.h"
 #include "trainer.h"
 #include "util.h"
 
 int main(int argc, char** argv) {
   SeedRandom();
 
-  int c, s = 0;
+  int c;
 
   char nnPath[128] = {0};
   char entriesPath[128] = {0};
@@ -28,9 +27,6 @@ int main(int argc, char** argv) {
       break;
     case 'n':
       strcpy(nnPath, optarg);
-      break;
-    case 's':
-      s = 1;
       break;
     case '?':
       return 1;
@@ -57,11 +53,6 @@ int main(int argc, char** argv) {
   data->n = 0;
   data->entries = malloc(sizeof(DataEntry) * MAX_POSITIONS);
   LoadEntries(entriesPath, data);
-
-  if (s) {
-    PrintMinMax(data, data->n, nn);
-    exit(0);
-  }
 
   NNGradients* gradients = malloc(sizeof(NNGradients));
   ClearGradients(gradients);
