@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-void LoadEntries(char* path, DataSet* data);
+void LoadEntries(char* path, DataSet* data, int n);
 void LoadDataEntry(char* buffer, DataEntry* result);
 void ShuffleData(DataSet* data);
 

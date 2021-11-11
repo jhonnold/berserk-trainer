@@ -9,7 +9,7 @@
 #include "util.h"
 
 
-void LoadEntries(char* path, DataSet* data) {
+void LoadEntries(char* path, DataSet* data, int n) {
   FILE* fp = fopen(path, "r");
   if (fp == NULL) {
     printf("Cannot open file: %s!\n", path);
@@ -18,7 +18,7 @@ void LoadEntries(char* path, DataSet* data) {
 
   int p = 0;
   char in[128];
-  while (p < MAX_POSITIONS && fgets(in, 128, fp)) {
+  while (p < n && fgets(in, 128, fp)) {
     LoadDataEntry(in, &data->entries[p++]);
 
     if (p % 16384 == 0)

@@ -52,14 +52,20 @@ int main(int argc, char** argv) {
   DataSet* data = malloc(sizeof(DataSet));
   data->n = 0;
   data->entries = malloc(sizeof(DataEntry) * MAX_POSITIONS);
-  LoadEntries(entriesPath, data);
+  LoadEntries(entriesPath, data, MAX_POSITIONS);
+
+  DataSet* validation = malloc(sizeof(DataSet));
+  validation->n = 0;
+  validation->entries = malloc(sizeof(DataEntry) * VALIDATION_POSITIONS);
+  LoadEntries(entriesPath, validation, VALIDATION_POSITIONS);
 
   NNGradients* gradients = malloc(sizeof(NNGradients));
   ClearGradients(gradients);
 
   BatchGradients* local = malloc(sizeof(BatchGradients) * THREADS);
 
-  float error = TotalError(data, nn);
+  printf("Calculating Validation Error...\r");
+  float error = TotalError(validation, nn);
   printf("Starting Error: [%1.8f]\n", error);
 
   for (int epoch = 1; epoch <= 250; epoch++) {
@@ -73,15 +79,15 @@ int main(int argc, char** argv) {
       Train(b, data, nn, gradients, local);
       ApplyGradients(nn, gradients);
 
-      printf("Batch: [#%5d]\r", b + 1);
+      printf("Batch: [#%d/%d]\r", b + 1, batches);
     }
 
     char buffer[64];
     sprintf(buffer, "../nets/berserk-ks.e%d.2x%d.nn", epoch, N_HIDDEN);
     SaveNN(nn, buffer);
 
-    printf("Calculating Error...\r");
-    float newError = TotalError(data, nn);
+    printf("Calculating Validation Error...\r");
+    float newError = TotalError(validation, nn);
 
     long now = GetTimeMS();
     printf("Epoch: [#%5d], Error: [%1.8f], Delta: [%+1.8f], LR: [%.5f], Speed: [%9.0f pos/s], Time: [%lds]\n", epoch,
