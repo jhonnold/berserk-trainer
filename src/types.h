@@ -4,7 +4,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define N_INPUT 1536
+#define N_INPUT 768
 #define N_HIDDEN 512
 #define N_OUTPUT 1
 
@@ -103,6 +103,7 @@ typedef struct {
   float skipWeights[N_INPUT];
 } BatchGradients;
 
+extern const Square psqt[];
 extern const Piece charToPiece[];
 extern const Piece opposite[];
 extern const int8_t scalar[];
