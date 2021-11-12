@@ -12,6 +12,7 @@
 const int NETWORK_MAGIC = 'B' | 'R' << 8 | 'K' << 16 | 'R' << 24;
 
 void NNPredict(NN* nn, Features* f, Color stm, NNAccumulators* results) {
+  float skips[2] = {0};
   results->output = 0.0f;
 
   // Apply first layer
@@ -24,15 +25,16 @@ void NNPredict(NN* nn, Features* f, Color stm, NNAccumulators* results) {
       results->acc1[BLACK][j] += nn->inputWeights[f->features[BLACK][i] * N_HIDDEN + j];
     }
 
-    results->output += nn->skipWeights[f->features[WHITE][i]];
-    results->output += nn->skipWeights[f->features[BLACK][i]];
+    skips[WHITE] += nn->psqtWeights[f->features[WHITE][i]];
+    skips[BLACK] += nn->psqtWeights[f->features[BLACK][i]];
   }
 
   ReLU(results->acc1[WHITE], N_HIDDEN);
   ReLU(results->acc1[BLACK], N_HIDDEN);
 
   results->output += DotProduct(results->acc1[stm], nn->outputWeights, N_HIDDEN) +
-                     DotProduct(results->acc1[stm ^ 1], nn->outputWeights + N_HIDDEN, N_HIDDEN) + //
+                     DotProduct(results->acc1[stm ^ 1], nn->outputWeights + N_HIDDEN, N_HIDDEN) +
+                     (skips[stm] - skips[stm ^ 1]) / 2 + //
                      nn->outputBias;
 }
 
@@ -61,7 +63,7 @@ NN* LoadNN(char* path) {
   fread(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
   fread(nn->outputWeights, sizeof(float), N_HIDDEN * 2, fp);
   fread(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
-  fread(nn->skipWeights, sizeof(float), N_INPUT, fp);
+  fread(nn->psqtWeights, sizeof(float), N_INPUT, fp);
 
   fclose(fp);
 
@@ -84,7 +86,7 @@ NN* LoadRandomNN() {
   nn->outputBias = Random(1);
 
   for (int i = 0; i < N_INPUT; i++)
-    nn->skipWeights[i] = Random(N_INPUT);
+    nn->psqtWeights[i] = Random(N_INPUT);
 
   return nn;
 }
@@ -105,7 +107,7 @@ void SaveNN(NN* nn, char* path) {
   fwrite(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
   fwrite(nn->outputWeights, sizeof(float), N_HIDDEN * 2, fp);
   fwrite(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
-  fwrite(nn->skipWeights, sizeof(float), N_INPUT, fp);
+  fwrite(nn->psqtWeights, sizeof(float), N_INPUT, fp);
 
   fclose(fp);
 }
