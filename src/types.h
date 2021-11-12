@@ -16,8 +16,8 @@
 #define BETA2 0.999f
 #define EPSILON 1e-8f
 
-#define MAX_POSITIONS 15000000
-#define VALIDATION_POSITIONS 100000
+#define MAX_POSITIONS 1500000000
+#define VALIDATION_POSITIONS 1000000
 
 enum {
   WHITE_PAWN,
@@ -103,6 +103,7 @@ typedef struct {
   float psqtWeights[N_INPUT];
 } BatchGradients;
 
+extern const float psqtValues[];
 extern const Square psqt[];
 extern const Piece charToPiece[];
 extern const Piece opposite[];

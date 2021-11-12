@@ -167,7 +167,7 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     }
     // ------------------------------------------------------------------------------------------
 
-    // SKIP CONNECTION GRADIENTS ----------------------------------------------------------------
+    // PSQT GRADIENTS ----------------------------------------------------------------
     for (int i = 0; i < f->n; i++) {
       local[t].psqtWeights[f->features[board.stm][i]] += outputLoss / 2;
       local[t].psqtWeights[f->features[board.stm ^ 1][i]] -= outputLoss / 2;

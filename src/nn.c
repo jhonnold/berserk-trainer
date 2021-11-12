@@ -12,7 +12,7 @@
 const int NETWORK_MAGIC = 'B' | 'R' << 8 | 'K' << 16 | 'R' << 24;
 
 void NNPredict(NN* nn, Features* f, Color stm, NNAccumulators* results) {
-  float skips[2] = {0};
+  float psqts[2] = {0};
   results->output = 0.0f;
 
   // Apply first layer
@@ -25,8 +25,8 @@ void NNPredict(NN* nn, Features* f, Color stm, NNAccumulators* results) {
       results->acc1[BLACK][j] += nn->inputWeights[f->features[BLACK][i] * N_HIDDEN + j];
     }
 
-    skips[WHITE] += nn->psqtWeights[f->features[WHITE][i]];
-    skips[BLACK] += nn->psqtWeights[f->features[BLACK][i]];
+    psqts[WHITE] += nn->psqtWeights[f->features[WHITE][i]];
+    psqts[BLACK] += nn->psqtWeights[f->features[BLACK][i]];
   }
 
   ReLU(results->acc1[WHITE], N_HIDDEN);
@@ -34,7 +34,7 @@ void NNPredict(NN* nn, Features* f, Color stm, NNAccumulators* results) {
 
   results->output += DotProduct(results->acc1[stm], nn->outputWeights, N_HIDDEN) +
                      DotProduct(results->acc1[stm ^ 1], nn->outputWeights + N_HIDDEN, N_HIDDEN) +
-                     (skips[stm] - skips[stm ^ 1]) / 2 + //
+                     (psqts[stm] - psqts[stm ^ 1]) / 2 + //
                      nn->outputBias;
 }
 
@@ -86,7 +86,7 @@ NN* LoadRandomNN() {
   nn->outputBias = Random(1);
 
   for (int i = 0; i < N_INPUT; i++)
-    nn->psqtWeights[i] = Random(N_INPUT);
+    nn->psqtWeights[i] = psqtValues[i / 64];
 
   return nn;
 }
