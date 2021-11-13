@@ -28,9 +28,11 @@ void NNPredict(NN* nn, Features* f, Color stm, NNAccumulators* results) {
   ReLU(results->acc1[WHITE], N_HIDDEN);
   ReLU(results->acc1[BLACK], N_HIDDEN);
 
-  results->output += DotProduct(results->acc1[stm], nn->outputWeights, N_HIDDEN) +
-                     DotProduct(results->acc1[stm ^ 1], nn->outputWeights + N_HIDDEN, N_HIDDEN) + //
-                     nn->outputBias;
+  int bucket = getBucket(f);
+
+  results->output += DotProduct(results->acc1[stm], nn->outputWeights[bucket], N_HIDDEN) +
+                     DotProduct(results->acc1[stm ^ 1], nn->outputWeights[bucket] + N_HIDDEN, N_HIDDEN) + //
+                     nn->outputBias[bucket];
 }
 
 NN* LoadNN(char* path) {
@@ -56,8 +58,11 @@ NN* LoadNN(char* path) {
 
   fread(nn->inputWeights, sizeof(float), N_INPUT * N_HIDDEN, fp);
   fread(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
-  fread(nn->outputWeights, sizeof(float), N_HIDDEN * 2, fp);
-  fread(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
+
+  for (int b = 0; b < N_BUCKETS; b++) {
+    fread(nn->outputWeights[b], sizeof(float), N_HIDDEN * 2, fp);
+    fread(&nn->outputBias[b], sizeof(float), N_OUTPUT, fp);
+  }
 
   fclose(fp);
 
@@ -74,10 +79,12 @@ NN* LoadRandomNN() {
   for (int i = 0; i < N_HIDDEN; i++)
     nn->inputBiases[i] = Random(N_HIDDEN);
 
-  for (int i = 0; i < N_HIDDEN * 2; i++)
-    nn->outputWeights[i] = Random(N_HIDDEN * 2);
+  for (int b = 0; b < N_BUCKETS; b++) {
+    for (int i = 0; i < N_HIDDEN * 2; i++)
+      nn->outputWeights[b][i] = Random(N_HIDDEN * 2);
 
-  nn->outputBias = Random(1);
+    nn->outputBias[b] = Random(1);
+  }
 
   return nn;
 }
@@ -96,8 +103,11 @@ void SaveNN(NN* nn, char* path) {
 
   fwrite(nn->inputWeights, sizeof(float), N_INPUT * N_HIDDEN, fp);
   fwrite(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
-  fwrite(nn->outputWeights, sizeof(float), N_HIDDEN * 2, fp);
-  fwrite(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
+
+  for (int b = 0; b < N_BUCKETS; b++) {
+    fwrite(nn->outputWeights[b], sizeof(float), N_HIDDEN * 2, fp);
+    fwrite(&nn->outputBias[b], sizeof(float), N_OUTPUT, fp);
+  }
 
   fclose(fp);
 }
