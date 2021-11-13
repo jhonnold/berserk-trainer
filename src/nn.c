@@ -23,9 +23,6 @@ void NNPredict(NN* nn, Features* f, Color stm, NNAccumulators* results) {
       results->acc1[WHITE][j] += nn->inputWeights[f->features[WHITE][i] * N_HIDDEN + j];
       results->acc1[BLACK][j] += nn->inputWeights[f->features[BLACK][i] * N_HIDDEN + j];
     }
-
-    results->output += nn->skipWeights[f->features[WHITE][i]];
-    results->output += nn->skipWeights[f->features[BLACK][i]];
   }
 
   ReLU(results->acc1[WHITE], N_HIDDEN);
@@ -61,7 +58,6 @@ NN* LoadNN(char* path) {
   fread(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
   fread(nn->outputWeights, sizeof(float), N_HIDDEN * 2, fp);
   fread(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
-  fread(nn->skipWeights, sizeof(float), N_INPUT, fp);
 
   fclose(fp);
 
@@ -83,9 +79,6 @@ NN* LoadRandomNN() {
 
   nn->outputBias = Random(1);
 
-  for (int i = 0; i < N_INPUT; i++)
-    nn->skipWeights[i] = Random(N_INPUT);
-
   return nn;
 }
 
@@ -105,7 +98,6 @@ void SaveNN(NN* nn, char* path) {
   fwrite(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
   fwrite(nn->outputWeights, sizeof(float), N_HIDDEN * 2, fp);
   fwrite(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
-  fwrite(nn->skipWeights, sizeof(float), N_INPUT, fp);
 
   fclose(fp);
 }
