@@ -166,13 +166,6 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
       }
     }
     // ------------------------------------------------------------------------------------------
-
-    // SKIP CONNECTION GRADIENTS ----------------------------------------------------------------
-    for (int i = 0; i < f->n; i++) {
-      local[t].skipWeights[f->features[board.stm][i]] += outputLoss;
-      local[t].skipWeights[f->features[board.stm ^ 1][i]] += outputLoss;
-    }
-    // ------------------------------------------------------------------------------------------
   }
 
   for (int t = 0; t < THREADS; t++) {
@@ -189,8 +182,5 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
       g->outputWeights[i].g += local[t].outputWeights[i];
 
     g->outputBias.g += local[t].outputBias;
-
-    for (int i = 0; i < N_INPUT; i++)
-      g->skipWeights[i].g += local[t].skipWeights[i];
   }
 }

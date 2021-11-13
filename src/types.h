@@ -17,7 +17,7 @@
 #define EPSILON 1e-8f
 
 #define MAX_POSITIONS 1500000000
-#define VALIDATION_POSITIONS 10000000
+#define VALIDATION_POSITIONS 1000000
 
 enum {
   WHITE_PAWN,
@@ -70,8 +70,6 @@ typedef struct {
 
   float inputBiases[N_HIDDEN] __attribute__((aligned(64)));
   float inputWeights[N_INPUT * N_HIDDEN] __attribute__((aligned(64)));
-
-  float skipWeights[N_INPUT] __attribute__((aligned(64)));
 } NN;
 
 typedef struct {
@@ -89,8 +87,6 @@ typedef struct {
 
   Gradient inputBiases[N_HIDDEN];
   Gradient inputWeights[N_INPUT * N_HIDDEN];
-
-  Gradient skipWeights[N_INPUT];
 } NNGradients;
 
 typedef struct {
@@ -99,8 +95,6 @@ typedef struct {
 
   float inputBiases[N_HIDDEN];
   float inputWeights[N_INPUT * N_HIDDEN];
-
-  float skipWeights[N_INPUT];
 } BatchGradients;
 
 extern const Square psqt[];
