@@ -52,12 +52,12 @@ int main(int argc, char** argv) {
   DataSet* data = malloc(sizeof(DataSet));
   data->n = 0;
   data->entries = malloc(sizeof(DataEntry) * MAX_POSITIONS);
-  LoadEntries(entriesPath, data, MAX_POSITIONS);
+  LoadEntries(entriesPath, data, MAX_POSITIONS, VALIDATION_POSITIONS);
 
   DataSet* validation = malloc(sizeof(DataSet));
   validation->n = 0;
   validation->entries = malloc(sizeof(DataEntry) * VALIDATION_POSITIONS);
-  LoadEntries(entriesPath, validation, VALIDATION_POSITIONS);
+  LoadEntries(entriesPath, validation, VALIDATION_POSITIONS, 0);
 
   NNGradients* gradients = malloc(sizeof(NNGradients));
   ClearGradients(gradients);
@@ -166,6 +166,13 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
       }
     }
     // ------------------------------------------------------------------------------------------
+
+    // PSQT GRADIENTS ----------------------------------------------------------------
+    for (int i = 0; i < f->n; i++) {
+      local[t].psqtWeights[f->features[board.stm][i]] += outputLoss / 2;
+      local[t].psqtWeights[f->features[board.stm ^ 1][i]] += outputLoss / 2;
+    }
+    // ------------------------------------------------------------------------------------------
   }
 
   for (int t = 0; t < THREADS; t++) {
@@ -182,5 +189,9 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
       g->outputWeights[i].g += local[t].outputWeights[i];
 
     g->outputBias.g += local[t].outputBias;
+
+#pragma omp parallel for schedule(auto) num_threads(2)
+    for (int i = 0; i < N_INPUT; i++)
+      g->psqtWeights[i].g += local[t].psqtWeights[i];
   }
 }

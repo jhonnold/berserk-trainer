@@ -33,6 +33,10 @@ INLINE void ApplyGradients(NN* nn, NNGradients* g) {
     UpdateAndApplyGradient(&nn->outputWeights[i], &g->outputWeights[i]);
 
   UpdateAndApplyGradient(&nn->outputBias, &g->outputBias);
+
+#pragma omp parallel for schedule(auto) num_threads(THREADS)
+  for (int i = 0; i < N_INPUT; i++)
+    UpdateAndApplyGradient(&nn->psqtWeights[i], &g->psqtWeights[i]);
 }
 
 INLINE void ClearGradients(NNGradients* gradients) {
@@ -41,6 +45,8 @@ INLINE void ClearGradients(NNGradients* gradients) {
 
   memset(gradients->outputWeights, 0, sizeof(gradients->outputWeights));
   gradients->outputBias = (Gradient){.g = 0.0f, .M = 0.0f, .V = 0.0f};
+
+  memset(gradients->psqtWeights, 0, sizeof(gradients->psqtWeights));
 }
 
 #endif
