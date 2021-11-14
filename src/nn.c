@@ -12,6 +12,8 @@
 const int NETWORK_MAGIC = 'B' | 'R' << 8 | 'K' << 16 | 'R' << 24;
 
 void NNPredict(NN* nn, Features* f, Color stm, NNAccumulators* results) {
+  float psqts[2] = {0};
+
   results->output = 0.0f;
 
   // Apply first layer
@@ -23,14 +25,24 @@ void NNPredict(NN* nn, Features* f, Color stm, NNAccumulators* results) {
       results->acc1[WHITE][j] += nn->inputWeights[f->features[WHITE][i] * N_HIDDEN + j];
       results->acc1[BLACK][j] += nn->inputWeights[f->features[BLACK][i] * N_HIDDEN + j];
     }
+
+    psqts[WHITE] += nn->psqtWeights[f->features[WHITE][i]];
+    psqts[BLACK] += nn->psqtWeights[f->features[BLACK][i]];
   }
 
   ReLU(results->acc1[WHITE], N_HIDDEN);
   ReLU(results->acc1[BLACK], N_HIDDEN);
 
-  results->output += DotProduct(results->acc1[stm], nn->outputWeights, N_HIDDEN) +
-                     DotProduct(results->acc1[stm ^ 1], nn->outputWeights + N_HIDDEN, N_HIDDEN) + //
-                     nn->outputBias;
+  memcpy(results->acc2, nn->h2Biases, sizeof(float) * N_HIDDEN_2);
+
+  for (int i = 0; i < N_HIDDEN_2; i++)
+    results->acc2[i] += DotProduct(results->acc1[stm], &nn->h2Weights[i * 2 * N_HIDDEN], N_HIDDEN) +
+                        DotProduct(results->acc1[stm ^ 1], &nn->h2Weights[i * 2 * N_HIDDEN + N_HIDDEN], N_HIDDEN);
+
+  ReLU(results->acc2, N_HIDDEN_2);
+
+  results->output +=
+      DotProduct(results->acc2, nn->outputWeights, N_HIDDEN_2) + nn->outputBias + (psqts[stm] - psqts[stm ^ 1]) / 2;
 }
 
 NN* LoadNN(char* path) {
@@ -56,8 +68,11 @@ NN* LoadNN(char* path) {
 
   fread(nn->inputWeights, sizeof(float), N_INPUT * N_HIDDEN, fp);
   fread(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
-  fread(nn->outputWeights, sizeof(float), N_HIDDEN * 2, fp);
+  fread(nn->h2Weights, sizeof(float), 2 * N_HIDDEN * N_HIDDEN_2, fp);
+  fread(nn->h2Biases, sizeof(float), N_HIDDEN_2, fp);
+  fread(nn->outputWeights, sizeof(float), N_HIDDEN_2, fp);
   fread(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
+  fread(nn->psqtWeights, sizeof(float), N_INPUT, fp);
 
   fclose(fp);
 
@@ -74,10 +89,19 @@ NN* LoadRandomNN() {
   for (int i = 0; i < N_HIDDEN; i++)
     nn->inputBiases[i] = Random(N_HIDDEN);
 
-  for (int i = 0; i < N_HIDDEN * 2; i++)
-    nn->outputWeights[i] = Random(N_HIDDEN * 2);
+  for (int i = 0; i < 2 * N_HIDDEN * N_HIDDEN_2; i++)
+    nn->h2Weights[i] = Random(2 * N_HIDDEN * N_HIDDEN_2);
+
+  for (int i = 0; i < N_HIDDEN_2; i++)
+    nn->h2Biases[i] = Random(N_HIDDEN_2);
+
+  for (int i = 0; i < N_HIDDEN_2; i++)
+    nn->outputWeights[i] = Random(N_HIDDEN_2);
 
   nn->outputBias = Random(1);
+
+  for (int i = 0; i < N_INPUT; i++)
+    nn->psqtWeights[i] = psqtInitValues[i / 64];
 
   return nn;
 }
@@ -96,8 +120,11 @@ void SaveNN(NN* nn, char* path) {
 
   fwrite(nn->inputWeights, sizeof(float), N_INPUT * N_HIDDEN, fp);
   fwrite(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
-  fwrite(nn->outputWeights, sizeof(float), N_HIDDEN * 2, fp);
+  fwrite(nn->h2Weights, sizeof(float), 2 * N_HIDDEN * N_HIDDEN_2, fp);
+  fwrite(nn->h2Biases, sizeof(float), N_HIDDEN_2, fp);
+  fwrite(nn->outputWeights, sizeof(float), N_HIDDEN_2, fp);
   fwrite(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
+  fwrite(nn->psqtWeights, sizeof(float), N_INPUT, fp);
 
   fclose(fp);
 }
