@@ -49,15 +49,15 @@ int main(int argc, char** argv) {
 
   printf("Loading entries from %s\n", entriesPath);
 
-  DataSet* data = malloc(sizeof(DataSet));
-  data->n = 0;
-  data->entries = malloc(sizeof(DataEntry) * MAX_POSITIONS);
-  LoadEntries(entriesPath, data, MAX_POSITIONS);
-
   DataSet* validation = malloc(sizeof(DataSet));
   validation->n = 0;
   validation->entries = malloc(sizeof(DataEntry) * VALIDATION_POSITIONS);
-  LoadEntries(entriesPath, validation, VALIDATION_POSITIONS);
+  LoadEntries(entriesPath, validation, VALIDATION_POSITIONS, 0);
+
+  DataSet* data = malloc(sizeof(DataSet));
+  data->n = 0;
+  data->entries = malloc(sizeof(DataEntry) * MAX_POSITIONS);
+  LoadEntries(entriesPath, data, MAX_POSITIONS, VALIDATION_POSITIONS);
 
   NNGradients* gradients = malloc(sizeof(NNGradients));
   ClearGradients(gradients);
@@ -77,7 +77,6 @@ int main(int argc, char** argv) {
     int batches = data->n / BATCH_SIZE;
     for (int b = 0; b < batches; b++) {
       Train(b, data, nn, gradients, local);
-      ApplyGradients(nn, gradients);
 
       printf("Batch: [#%d/%d]\r", b + 1, batches);
     }
@@ -121,6 +120,8 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
   for (int t = 0; t < THREADS; t++)
     memset(&local[t], 0, sizeof(BatchGradients));
 
+  uint8_t activated[THREADS][N_INPUT] = {0};
+
 #pragma omp parallel for schedule(auto) num_threads(THREADS)
   for (int n = 0; n < BATCH_SIZE; n++) {
     const int t = omp_get_thread_num();
@@ -129,9 +130,13 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     Board board = entry.board;
 
     NNAccumulators activations[1];
-    Features f[1];
 
+    Features f[1];
     ToFeatures(&board, f);
+
+    for (int i = 0; i < f->n; i++)
+      activated[t][f->features[WHITE][i]] = activated[t][f->features[BLACK][i]] = 1;
+
     NNPredict(nn, f, board.stm, activations);
 
     float out = Sigmoid(activations->output);
@@ -169,18 +174,23 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
   }
 
   for (int t = 0; t < THREADS; t++) {
-#pragma omp parallel for schedule(auto) num_threads(2)
-    for (int i = 0; i < N_INPUT * N_HIDDEN; i++)
-      g->inputWeights[i].g += local[t].inputWeights[i];
+#pragma omp parallel for schedule(auto) num_threads(THREADS)
+    for (int i = 0; i < N_INPUT; i++) {
+      if (!activated[t][i])
+        continue;
 
-#pragma omp parallel for schedule(auto) num_threads(2)
+      for (int j = 0; j < N_HIDDEN; j++)
+        g->inputWeights[i * N_HIDDEN + j].g += local[t].inputWeights[i * N_HIDDEN + j];
+    }
+
     for (int i = 0; i < N_HIDDEN; i++)
       g->inputBiases[i].g += local[t].inputBiases[i];
 
-#pragma omp parallel for schedule(auto) num_threads(2)
     for (int i = 0; i < N_HIDDEN * 2; i++)
       g->outputWeights[i].g += local[t].outputWeights[i];
 
     g->outputBias.g += local[t].outputBias;
   }
+
+  ApplyGradients(nn, g);
 }

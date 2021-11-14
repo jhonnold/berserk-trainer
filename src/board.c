@@ -43,11 +43,13 @@ void ParseFen(char* fen, Board* board) {
         board->kings[WHITE] = sq;
       else if (c == 'k')
         board->kings[BLACK] = sq;
+      else {
+        setBit(board->occupancies, sq);
+        board->pieces[n / 2] |= pc << ((n & 1) * 4);
 
-      setBit(board->occupancies, sq);
-      board->pieces[n / 2] |= pc << ((n & 1) * 4);
+        n++;
+      }
 
-      n++;
     } else if (c >= '1' && c <= '8')
       sq += (c - '1');
     else if (c == '/')
