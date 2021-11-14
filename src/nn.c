@@ -25,8 +25,8 @@ void NNPredict(NN* nn, Features* f, Color stm, NNAccumulators* results) {
     }
   }
 
-  ReLU(results->acc1[WHITE], N_HIDDEN);
-  ReLU(results->acc1[BLACK], N_HIDDEN);
+  CReLU(results->acc1[WHITE], N_HIDDEN);
+  CReLU(results->acc1[BLACK], N_HIDDEN);
 
   results->output += DotProduct(results->acc1[stm], nn->outputWeights, N_HIDDEN) +
                      DotProduct(results->acc1[stm ^ 1], nn->outputWeights + N_HIDDEN, N_HIDDEN) + //

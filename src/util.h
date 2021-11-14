@@ -15,7 +15,9 @@ INLINE float Sigmoid(float s) { return 1.0f / (1.0f + expf(-s * SS)); }
 
 INLINE float SigmoidPrime(float s) { return s * (1.0 - s) * SS; }
 
-INLINE float ReLUPrime(float s) { return s > 0; }
+INLINE float ReLUPrime(float s) { return s > 0.0f; }
+
+INLINE float CReLUPrime(float s) { return s > 0.0f && s < 1.0f; }
 
 INLINE uint64_t NetworkHash(NN* nn) {
   uint64_t hash = 0;

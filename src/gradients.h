@@ -6,7 +6,7 @@
 #include "types.h"
 #include "util.h"
 
-INLINE void UpdateAndApplyGradient(float* v, Gradient* grad) {
+INLINE void UpdateAndApplyGradient(float* v, Gradient* grad, const float range) {
   if (!grad->g)
     return;
 
@@ -16,23 +16,26 @@ INLINE void UpdateAndApplyGradient(float* v, Gradient* grad) {
 
   *v -= delta;
 
+  if (range)
+    *v = *v > range ? range : *v < -range ? -range : *v;
+
   grad->g = 0;
 }
 
 INLINE void ApplyGradients(NN* nn, NNGradients* g) {
 #pragma omp parallel for schedule(auto) num_threads(THREADS)
   for (int i = 0; i < N_INPUT * N_HIDDEN; i++)
-    UpdateAndApplyGradient(&nn->inputWeights[i], &g->inputWeights[i]);
+    UpdateAndApplyGradient(&nn->inputWeights[i], &g->inputWeights[i], 0);
 
 #pragma omp parallel for schedule(auto) num_threads(THREADS)
   for (int i = 0; i < N_HIDDEN; i++)
-    UpdateAndApplyGradient(&nn->inputBiases[i], &g->inputBiases[i]);
+    UpdateAndApplyGradient(&nn->inputBiases[i], &g->inputBiases[i], 0);
 
 #pragma omp parallel for schedule(auto) num_threads(THREADS)
   for (int i = 0; i < N_HIDDEN * 2; i++)
-    UpdateAndApplyGradient(&nn->outputWeights[i], &g->outputWeights[i]);
+    UpdateAndApplyGradient(&nn->outputWeights[i], &g->outputWeights[i], 127.0f / 32.0f);
 
-  UpdateAndApplyGradient(&nn->outputBias, &g->outputBias);
+  UpdateAndApplyGradient(&nn->outputBias, &g->outputBias, 0);
 }
 
 INLINE void ClearGradients(NNGradients* gradients) {
