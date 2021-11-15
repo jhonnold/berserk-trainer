@@ -21,8 +21,8 @@ void ToFeatures(Board* board, Features* f) {
     f->n++;
   }
 
-  f->features[WHITE][f->n] = 12 * 2 * 32 + bits(board->occupancies);
-  f->features[BLACK][f->n] = 12 * 2 * 32 + bits(board->occupancies);
+  f->features[WHITE][f->n] = 768 + f->n - 1;
+  f->features[BLACK][f->n] = 768 + f->n - 1;
   f->n++;
 }
 
