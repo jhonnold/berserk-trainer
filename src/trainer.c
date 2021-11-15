@@ -79,11 +79,17 @@ int main(int argc, char** argv) {
       Train(b, data, nn, gradients, local);
       ApplyGradients(nn, gradients);
 
+      if (b % 6000 == 0) {
+        char buffer[64];
+        sprintf(buffer, "../nets/berserk-kspc.e%d.b%d.2x%d.nn", epoch, b, N_HIDDEN);
+        SaveNN(nn, buffer);
+      }
+
       printf("Batch: [#%d/%d]\r", b + 1, batches);
     }
 
     char buffer[64];
-    sprintf(buffer, "../nets/berserk-ks.e%d.2x%d.nn", epoch, N_HIDDEN);
+    sprintf(buffer, "../nets/berserk-kspc.e%d.2x%d.nn", epoch, N_HIDDEN);
     SaveNN(nn, buffer);
 
     printf("Calculating Validation Error...\r");

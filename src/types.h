@@ -4,7 +4,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define N_INPUT 768
+#define N_INPUT 800
 #define N_HIDDEN 512
 #define N_OUTPUT 1
 
@@ -50,7 +50,7 @@ typedef struct {
 
 typedef struct {
   int8_t n;
-  Feature features[2][32];
+  Feature features[2][33];
 } Features;
 
 typedef struct {

@@ -20,6 +20,10 @@ void ToFeatures(Board* board, Features* f) {
 
     f->n++;
   }
+
+  f->features[WHITE][f->n] = 12 * 2 * 32 + bits(board->occupancies);
+  f->features[BLACK][f->n] = 12 * 2 * 32 + bits(board->occupancies);
+  f->n++;
 }
 
 void ParseFen(char* fen, Board* board) {
