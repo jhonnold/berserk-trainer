@@ -49,15 +49,15 @@ int main(int argc, char** argv) {
 
   printf("Loading entries from %s\n", entriesPath);
 
-  DataSet* data = malloc(sizeof(DataSet));
-  data->n = 0;
-  data->entries = malloc(sizeof(DataEntry) * MAX_POSITIONS);
-  LoadEntries(entriesPath, data, MAX_POSITIONS);
-
   DataSet* validation = malloc(sizeof(DataSet));
   validation->n = 0;
   validation->entries = malloc(sizeof(DataEntry) * VALIDATION_POSITIONS);
   LoadEntries(entriesPath, validation, VALIDATION_POSITIONS);
+
+  DataSet* data = malloc(sizeof(DataSet));
+  data->n = 0;
+  data->entries = malloc(sizeof(DataEntry) * MAX_POSITIONS);
+  LoadEntries(entriesPath, data, MAX_POSITIONS);
 
   NNGradients* gradients = malloc(sizeof(NNGradients));
   ClearGradients(gradients);
@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
   float error = TotalError(validation, nn);
   printf("Starting Error: [%1.8f]\n", error);
 
-  for (int epoch = 1; epoch <= 250; epoch++) {
+  for (int epoch = 1; epoch <= 50; epoch++) {
     long epochStart = GetTimeMS();
 
     printf("Shuffling...\r");
@@ -169,7 +169,7 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
   }
 
   for (int t = 0; t < THREADS; t++) {
-#pragma omp parallel for schedule(auto) num_threads(2)
+#pragma omp parallel for schedule(auto) num_threads(4)
     for (int i = 0; i < N_INPUT * N_HIDDEN; i++)
       g->inputWeights[i].g += local[t].inputWeights[i];
 

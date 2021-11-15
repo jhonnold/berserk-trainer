@@ -2,12 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 #include "board.h"
 #include "data.h"
 #include "random.h"
 #include "util.h"
-
 
 void LoadEntries(char* path, DataSet* data, int n) {
   FILE* fp = fopen(path, "r");
@@ -22,11 +20,11 @@ void LoadEntries(char* path, DataSet* data, int n) {
     LoadDataEntry(in, &data->entries[p++]);
 
     if (p % 16384 == 0)
-      printf("\rLoaded positions: [%9d]", p);
+      printf("\rLoaded positions: [%10d]", p);
   }
 
   data->n = p;
-  printf("\rLoaded positions: [%9d]\n", p);
+  printf("\rLoaded positions: [%10d]\n", p);
 }
 
 void LoadDataEntry(char* buffer, DataEntry* result) {
