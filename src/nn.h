@@ -19,6 +19,14 @@ INLINE void ReLU(float* v, size_t n) {
     _mm256_store_ps(v + j, _mm256_max_ps(zero, _mm256_load_ps(v + j)));
 }
 
+INLINE void CReLU(float* v, size_t n) {
+  const __m256 zero = _mm256_setzero_ps();
+  const __m256 one = _mm256_set1_ps(1.0f);
+
+  for (size_t j = 0; j < n; j += sizeof(__m256) / sizeof(float))
+    _mm256_store_ps(v + j, _mm256_min_ps(one, _mm256_max_ps(zero, _mm256_load_ps(v + j))));
+}
+
 INLINE float DotProduct(float* v1, float* v2, size_t n) {
   __m256 r8 = _mm256_setzero_ps();
   for (size_t j = 0; j < n; j += sizeof(__m256) / sizeof(float)) {

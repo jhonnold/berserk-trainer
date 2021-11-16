@@ -8,9 +8,6 @@ const Piece charToPiece[] = {['P'] = WHITE_PAWN,   ['N'] = WHITE_KNIGHT, ['B'] =
 const Piece opposite[] = {BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN, BLACK_KING,
                           WHITE_PAWN, WHITE_KNIGHT, WHITE_BISHOP, WHITE_ROOK, WHITE_QUEEN, WHITE_KING};
 
-const float psqtInitValues[] = {76.25f,  310.0f,  322.5f,  491.25f,  940.0f,  0.0f,
-                                -76.25f, -310.0f, -322.5f, -491.25f, -940.0f, 0.0f};
-
 const Square psqt[] = {0,  1,  2,  3,  3,  2,  1,  0,  4,  5,  6,  7,  7,  6,  5,  4,  8,  9,  10, 11, 11, 10,
                        9,  8,  12, 13, 14, 15, 15, 14, 13, 12, 16, 17, 18, 19, 19, 18, 17, 16, 20, 21, 22, 23,
                        23, 22, 21, 20, 24, 25, 26, 27, 27, 26, 25, 24, 28, 29, 30, 31, 31, 30, 29, 28};
