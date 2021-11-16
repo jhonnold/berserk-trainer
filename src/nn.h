@@ -12,6 +12,7 @@ NN* LoadNN(char* path);
 NN* LoadRandomNN();
 void SaveNN(NN* nn, char* path);
 
+#if defined(__AVX2___)
 INLINE void ReLU(float* v, size_t n) {
   const __m256 zero = _mm256_setzero_ps();
 
@@ -32,5 +33,20 @@ INLINE float DotProduct(float* v1, float* v2, size_t n) {
   const __m128 r1 = _mm_add_ss(r2, _mm_shuffle_ps(r2, r2, 0x1));
   return _mm_cvtss_f32(r1);
 }
+#else
+INLINE void ReLU(float* v, size_t n) {
+  for (size_t j = 0; j < n; j++)
+    v[j] = fmax(0.0f, v[j]);
+}
+
+INLINE float DotProduct(float* v1, float* v2, size_t n) {
+  float result = 0.0f;
+
+  for (size_t j = 0; j < n; j++)
+    result += v1[j] * v2[j];
+
+  return result;
+}
+#endif
 
 #endif
