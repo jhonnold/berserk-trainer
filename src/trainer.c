@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
   float error = TotalError(validation, nn);
   printf("Starting Error: [%1.8f]\n", error);
 
-  for (int epoch = 1; epoch <= 250; epoch++) {
+  for (int epoch = 1; epoch <= 1; epoch++) {
     long epochStart = GetTimeMS();
 
     printf("Shuffling...\r");
@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
 
     char buffer[64];
     sprintf(buffer, "../nets/berserk-ks.e%d.2x%d.nn", epoch, N_HIDDEN);
-    SaveNN(nn, buffer);
+    // SaveNN(nn, buffer);
 
     printf("Calculating Validation Error...\r");
     float newError = TotalError(validation, nn);
@@ -149,15 +149,27 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
 
     // OUTPUT LAYER GRADIENTS -------------------------------------------------------------------
     local[t].outputBias += outputLoss;
+    printf("Output loss\n");
+    ValidateGradient(outputLoss, &nn->outputBias, nn, &entry);
+
     for (int i = 0; i < N_HIDDEN; i++) {
+      printf("Output weight: %d\n", i);
+      ValidateGradient(activations->acc1[board.stm][i] * outputLoss, &nn->outputWeights[i], nn, &entry);
+      printf("Output weight: %d\n", i + N_HIDDEN);
+      ValidateGradient(activations->acc1[board.stm ^ 1][i] * outputLoss, &nn->outputWeights[i + N_HIDDEN], nn, &entry);
+
       local[t].outputWeights[i] += activations->acc1[board.stm][i] * outputLoss;
       local[t].outputWeights[i + N_HIDDEN] += activations->acc1[board.stm ^ 1][i] * outputLoss;
     }
     // ------------------------------------------------------------------------------------------
 
     // INPUT LAYER GRADIENTS --------------------------------------------------------------------
-    for (int i = 0; i < N_HIDDEN; i++)
+    for (int i = 0; i < N_HIDDEN; i++) {
+      printf("Input bias: %d\n", i);
+      ValidateGradient(hiddenLosses[board.stm][i] + hiddenLosses[board.stm ^ 1][i], &nn->inputBiases[i], nn, &entry);
+
       local[t].inputBiases[i] += hiddenLosses[board.stm][i] + hiddenLosses[board.stm ^ 1][i];
+    }
 
     for (int i = 0; i < f->n; i++) {
       for (int j = 0; j < N_HIDDEN; j++) {

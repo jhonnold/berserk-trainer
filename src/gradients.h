@@ -3,8 +3,40 @@
 
 #include <string.h>
 
+#include "nn.h"
+#include "trainer.h"
 #include "types.h"
 #include "util.h"
+
+INLINE void ValidateGradient(float calculatedGradient, float* toValidate, NN* nn, DataEntry* entry) {
+  NNAccumulators activations[1];
+
+  Features features[1];
+  ToFeatures(&entry->board, features);
+
+  float temp = *toValidate;
+
+  // Raise value
+  *toValidate += 0.1f;
+  NNPredict(nn, features, entry->board.stm, activations);
+  float raisedSigmoidResult = Sigmoid(activations->output);
+  float raisedError = Error(raisedSigmoidResult, entry);
+  *toValidate = temp;
+
+  // Lower value
+  *toValidate -= 0.1f;
+  NNPredict(nn, features, entry->board.stm, activations);
+  float loweredSigmoidResult = Sigmoid(activations->output);
+  float loweredError = Error(loweredSigmoidResult, entry);
+  *toValidate = temp;
+
+  float expectedGradient = (raisedError - loweredError) / 0.2f;
+
+  float diff = fabs((calculatedGradient - expectedGradient) / calculatedGradient);
+
+  if (diff > 0.05f)
+    printf("Failed! Calculated: %+0.10f, Expected: %+0.10f, Diff: %+0.10f\n", calculatedGradient, expectedGradient, diff);
+}
 
 INLINE void UpdateAndApplyGradient(float* v, Gradient* grad) {
   if (!grad->g)
