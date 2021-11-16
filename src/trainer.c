@@ -141,15 +141,15 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
 
     float h2losses[N_HIDDEN_2];
     for (int i = 0; i < N_HIDDEN_2; i++)
-      h2losses[i] = outputLoss * nn->outputWeights[i] * ReLUPrime(activations->acc2[i]);
+      h2losses[i] = outputLoss * nn->outputWeights[i] * CReLUPrime(activations->acc2[i]);
 
     float hiddenLosses[2][N_HIDDEN] = {0};
     for (int i = 0; i < N_HIDDEN; i++) {
       for (int j = 0; j < N_HIDDEN_2; j++) {
         hiddenLosses[board.stm][i] +=
-            h2losses[j] * nn->h2Weights[j * 2 * N_HIDDEN + i] * ReLUPrime(activations->acc1[board.stm][i]);
+            h2losses[j] * nn->h2Weights[j * 2 * N_HIDDEN + i] * CReLUPrime(activations->acc1[board.stm][i]);
         hiddenLosses[board.stm ^ 1][i] += h2losses[j] * nn->h2Weights[j * 2 * N_HIDDEN + i + N_HIDDEN] *
-                                          ReLUPrime(activations->acc1[board.stm ^ 1][i]);
+                                          CReLUPrime(activations->acc1[board.stm ^ 1][i]);
       }
     }
     // ------------------------------------------------------------------------------------------
