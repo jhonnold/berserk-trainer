@@ -36,7 +36,8 @@ INLINE uint64_t NetworkHash(NN* nn) {
 
 INLINE float Random(int s) {
   float m = sqrtf(2.0f / s);
-  return rand() * m / RAND_MAX;
+  float r = rand() * m / RAND_MAX;
+  return !(rand() & 1) ? r : -r;
 }
 
 #endif
