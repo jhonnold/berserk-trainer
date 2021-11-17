@@ -17,6 +17,8 @@ INLINE double SigmoidPrime(double sig) { return SS * sig * (1.0 - sig); }
 
 INLINE int ReLUPrime(float s) { return s > 0.0; }
 
+INLINE float CReLUPrime(float s) { return s > 0.0f && s < 1.0f; }
+
 INLINE uint64_t NetworkHash(NN* nn) {
   uint64_t hash = 0;
 
@@ -26,7 +28,7 @@ INLINE uint64_t NetworkHash(NN* nn) {
   for (int i = 0; i < N_HIDDEN; i++)
     hash = H(hash, (int)nn->inputBiases[i]);
 
-  for (int i = 0; i < N_HIDDEN * 2; i++)
+  for (int i = 0; i < N_HIDDEN_2; i++)
     hash = H(hash, (int)nn->outputWeights[i]);
 
   hash = H(hash, (int)nn->outputBias);

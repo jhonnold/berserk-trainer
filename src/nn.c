@@ -25,12 +25,19 @@ void NNPredict(NN* nn, Features* f, Color stm, NNAccumulators* results) {
     }
   }
 
-  ReLU(results->acc1[WHITE], N_HIDDEN);
-  ReLU(results->acc1[BLACK], N_HIDDEN);
+  CReLU(results->acc1[WHITE], N_HIDDEN);
+  CReLU(results->acc1[BLACK], N_HIDDEN);
 
-  results->output += DotProduct(results->acc1[stm], nn->outputWeights, N_HIDDEN) +
-                     DotProduct(results->acc1[stm ^ 1], nn->outputWeights + N_HIDDEN, N_HIDDEN) + //
-                     nn->outputBias;
+  memcpy(results->acc2, nn->h2Biases, sizeof(float) * N_HIDDEN_2);
+
+  for (int i = 0; i < N_HIDDEN_2; i++)
+    results->acc2[i] += DotProduct(results->acc1[stm], &nn->h2Weights[i * 2 * N_HIDDEN], N_HIDDEN) +
+                        DotProduct(results->acc1[stm ^ 1], &nn->h2Weights[i * 2 * N_HIDDEN + N_HIDDEN], N_HIDDEN);
+
+  CReLU(results->acc2, N_HIDDEN_2);
+
+  results->output +=
+      DotProduct(results->acc2, nn->outputWeights, N_HIDDEN_2) + nn->outputBias;
 }
 
 NN* LoadNN(char* path) {
@@ -56,7 +63,9 @@ NN* LoadNN(char* path) {
 
   fread(nn->inputWeights, sizeof(float), N_INPUT * N_HIDDEN, fp);
   fread(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
-  fread(nn->outputWeights, sizeof(float), N_HIDDEN * 2, fp);
+  fread(nn->h2Weights, sizeof(float), 2 * N_HIDDEN * N_HIDDEN_2, fp);
+  fread(nn->h2Biases, sizeof(float), N_HIDDEN_2, fp);
+  fread(nn->outputWeights, sizeof(float), N_HIDDEN_2, fp);
   fread(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
 
   fclose(fp);
@@ -74,8 +83,14 @@ NN* LoadRandomNN() {
   for (int i = 0; i < N_HIDDEN; i++)
     nn->inputBiases[i] = Random(N_HIDDEN);
 
-  for (int i = 0; i < N_HIDDEN * 2; i++)
-    nn->outputWeights[i] = Random(N_HIDDEN * 2);
+  for (int i = 0; i < 2 * N_HIDDEN * N_HIDDEN_2; i++)
+    nn->h2Weights[i] = Random(2 * N_HIDDEN * N_HIDDEN_2);
+
+  for (int i = 0; i < N_HIDDEN_2; i++)
+    nn->h2Biases[i] = Random(N_HIDDEN_2);
+
+  for (int i = 0; i < N_HIDDEN_2; i++)
+    nn->outputWeights[i] = Random(N_HIDDEN_2);
 
   nn->outputBias = Random(1);
 
@@ -96,7 +111,9 @@ void SaveNN(NN* nn, char* path) {
 
   fwrite(nn->inputWeights, sizeof(float), N_INPUT * N_HIDDEN, fp);
   fwrite(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
-  fwrite(nn->outputWeights, sizeof(float), N_HIDDEN * 2, fp);
+  fwrite(nn->h2Weights, sizeof(float), 2 * N_HIDDEN * N_HIDDEN_2, fp);
+  fwrite(nn->h2Biases, sizeof(float), N_HIDDEN_2, fp);
+  fwrite(nn->outputWeights, sizeof(float), N_HIDDEN_2, fp);
   fwrite(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
 
   fclose(fp);
