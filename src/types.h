@@ -5,20 +5,20 @@
 #include <stdbool.h>
 
 #define N_INPUT 768
-#define N_HIDDEN 128
+#define N_HIDDEN 64
 #define N_HIDDEN_2 16
 #define N_OUTPUT 1
 
-#define THREADS 1
-#define BATCH_SIZE 1
+#define THREADS 8
+#define BATCH_SIZE 16384
 
 #define ALPHA 0.01f
 #define BETA1 0.9f
 #define BETA2 0.999f
 #define EPSILON 1e-8f
 
-#define MAX_POSITIONS 10
-#define VALIDATION_POSITIONS 0
+#define MAX_POSITIONS 100000000
+#define VALIDATION_POSITIONS 1000000
 
 enum {
   WHITE_PAWN,
