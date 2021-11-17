@@ -18,6 +18,9 @@ void NNPredict(NN* nn, Features* f, Color stm, NNAccumulators* results) {
   memcpy(results->acc1[WHITE], nn->inputBiases, sizeof(float) * N_HIDDEN);
   memcpy(results->acc1[BLACK], nn->inputBiases, sizeof(float) * N_HIDDEN);
 
+  memcpy(results->pawnAcc1[WHITE], nn->pawnInputBiases, sizeof(float) * N_PAWN_HIDDEN);
+  memcpy(results->pawnAcc1[BLACK], nn->pawnInputBiases, sizeof(float) * N_PAWN_HIDDEN);
+
   for (int i = 0; i < f->n; i++) {
     for (size_t j = 0; j < N_HIDDEN; j++) {
       results->acc1[WHITE][j] += nn->inputWeights[f->features[WHITE][i] * N_HIDDEN + j];
@@ -25,11 +28,23 @@ void NNPredict(NN* nn, Features* f, Color stm, NNAccumulators* results) {
     }
   }
 
+  for (int i = 0; i < f->p; i++) {
+    for (size_t j = 0; j < N_PAWN_HIDDEN; j++) {
+      results->pawnAcc1[WHITE][j] += nn->pawnInputWeights[f->pawnFeatures[WHITE][i] * N_PAWN_HIDDEN + j];
+      results->pawnAcc1[BLACK][j] += nn->pawnInputWeights[f->pawnFeatures[BLACK][i] * N_PAWN_HIDDEN + j];
+    }
+  }
+
   ReLU(results->acc1[WHITE], N_HIDDEN);
   ReLU(results->acc1[BLACK], N_HIDDEN);
 
+  ReLU(results->pawnAcc1[WHITE], N_PAWN_HIDDEN);
+  ReLU(results->pawnAcc1[BLACK], N_PAWN_HIDDEN);
+
   results->output += DotProduct(results->acc1[stm], nn->outputWeights, N_HIDDEN) +
                      DotProduct(results->acc1[stm ^ 1], nn->outputWeights + N_HIDDEN, N_HIDDEN) + //
+                     DotProduct(results->pawnAcc1[stm], nn->pawnOutputWeights, N_PAWN_HIDDEN) + //
+                     DotProduct(results->pawnAcc1[stm ^ 1], nn->pawnOutputWeights + N_PAWN_HIDDEN, N_PAWN_HIDDEN) + //
                      nn->outputBias;
 }
 
@@ -59,6 +74,10 @@ NN* LoadNN(char* path) {
   fread(nn->outputWeights, sizeof(float), N_HIDDEN * 2, fp);
   fread(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
 
+  fread(nn->pawnInputWeights, sizeof(float), N_PAWN_INPUT * N_PAWN_HIDDEN, fp);
+  fread(nn->pawnInputBiases, sizeof(float), N_PAWN_HIDDEN, fp);
+  fread(nn->pawnOutputWeights, sizeof(float), N_PAWN_HIDDEN * 2, fp);
+
   fclose(fp);
 
   return nn;
@@ -79,6 +98,15 @@ NN* LoadRandomNN() {
 
   nn->outputBias = Random(1);
 
+  for (int i = 0; i < N_PAWN_INPUT * N_PAWN_HIDDEN; i++)
+    nn->pawnInputWeights[i] = Random(N_PAWN_INPUT * N_PAWN_HIDDEN);
+
+  for (int i = 0; i < N_PAWN_HIDDEN; i++)
+    nn->pawnInputBiases[i] = Random(N_PAWN_HIDDEN);
+
+  for (int i = 0; i < N_PAWN_HIDDEN * 2; i++)
+    nn->pawnOutputWeights[i] = Random(N_PAWN_HIDDEN * 2);
+
   return nn;
 }
 
@@ -98,6 +126,10 @@ void SaveNN(NN* nn, char* path) {
   fwrite(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
   fwrite(nn->outputWeights, sizeof(float), N_HIDDEN * 2, fp);
   fwrite(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
+
+  fwrite(nn->pawnInputWeights, sizeof(float), N_PAWN_INPUT * N_PAWN_HIDDEN, fp);
+  fwrite(nn->pawnInputBiases, sizeof(float), N_PAWN_HIDDEN, fp);
+  fwrite(nn->pawnOutputWeights, sizeof(float), N_PAWN_HIDDEN * 2, fp);
 
   fclose(fp);
 }

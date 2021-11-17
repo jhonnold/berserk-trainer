@@ -6,7 +6,12 @@
 
 #define N_INPUT 768
 #define N_HIDDEN 512
+
+#define N_PAWN_INPUT 224
+#define N_PAWN_HIDDEN 64
+
 #define N_OUTPUT 1
+
 
 #define THREADS 8
 #define BATCH_SIZE 16384
@@ -49,8 +54,9 @@ typedef struct {
 } Board;
 
 typedef struct {
-  int8_t n;
+  int8_t n, p;
   Feature features[2][32];
+  Features pawnFeatures[2][18];
 } Features;
 
 typedef struct {
@@ -70,11 +76,18 @@ typedef struct {
 
   float inputBiases[N_HIDDEN] __attribute__((aligned(64)));
   float inputWeights[N_INPUT * N_HIDDEN] __attribute__((aligned(64)));
+
+  // uses same output bias
+  float pawnOutputWeights[2 * N_PAWN_HIDDEN] __attribute__((aligned(64)));
+
+  float pawnInputBiases[N_PAWN_HIDDEN] __attribute__((aligned(64)));
+  float pawnInputWeights[N_PAWN_INPUT * N_PAWN_HIDDEN] __attribute__((aligned(64)));
 } NN;
 
 typedef struct {
   float output;
   float acc1[2][N_HIDDEN] __attribute__((aligned(64)));
+  float pawnAcc1[2][N_PAWN_HIDDEN] __attribute__((aligned(64)));
 } NNAccumulators;
 
 typedef struct {
@@ -87,6 +100,11 @@ typedef struct {
 
   Gradient inputBiases[N_HIDDEN];
   Gradient inputWeights[N_INPUT * N_HIDDEN];
+
+  Gradient pawnOutputWeights[2 * N_PAWN_HIDDEN];
+
+  Gradient pawnInputBiases[N_PAWN_HIDDEN];
+  Gradient pawnInputWeights[N_PAWN_INPUT * N_PAWN_HIDDEN];
 } NNGradients;
 
 typedef struct {
@@ -95,8 +113,14 @@ typedef struct {
 
   float inputBiases[N_HIDDEN];
   float inputWeights[N_INPUT * N_HIDDEN];
+
+  float pawnOutputWeights[2 * N_PAWN_HIDDEN];
+
+  float pawnInputBiases[N_PAWN_HIDDEN];
+  float pawnInputWeights[N_PAWN_INPUT * N_PAWN_HIDDEN];
 } BatchGradients;
 
+extern const Feature pawnIdxOffset[];
 extern const Square psqt[];
 extern const Piece charToPiece[];
 extern const Piece opposite[];
