@@ -5,8 +5,8 @@
 #include <stdbool.h>
 
 #define N_INPUT 768
-#define N_HIDDEN 64
-#define N_HIDDEN_2 16
+#define N_HIDDEN 256
+#define N_HIDDEN_2 32
 #define N_OUTPUT 1
 
 #define THREADS 8
@@ -17,8 +17,8 @@
 #define BETA2 0.999f
 #define EPSILON 1e-8f
 
-#define MAX_POSITIONS 100000000
-#define VALIDATION_POSITIONS 1000000
+#define MAX_POSITIONS 1500000000
+#define VALIDATION_POSITIONS 2500000
 
 enum {
   WHITE_PAWN,
