@@ -1,6 +1,6 @@
 CC = gcc
 SRC = *.c
-EXE = testing
+EXE = trainer
 
 LIBS = -lm
 DEFS = -DNDEBUG
