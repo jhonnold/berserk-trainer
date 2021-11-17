@@ -56,7 +56,7 @@ typedef struct {
 typedef struct {
   int8_t n, p;
   Feature features[2][32];
-  Features pawnFeatures[2][18];
+  Feature pawnFeatures[2][18];
 } Features;
 
 typedef struct {

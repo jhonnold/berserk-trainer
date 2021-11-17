@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
     }
 
     char buffer[64];
-    sprintf(buffer, "../nets/berserk-ks.e%d.2x%d.nn", epoch, N_HIDDEN);
+    sprintf(buffer, "../nets/berserk-ks+p.e%d.2x%d.2x%d.nn", epoch, N_HIDDEN, N_PAWN_HIDDEN);
     SaveNN(nn, buffer);
 
     printf("Calculating Validation Error...\r");
@@ -145,13 +145,26 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
       hiddenLosses[board.stm ^ 1][i] =
           outputLoss * nn->outputWeights[i + N_HIDDEN] * ReLUPrime(activations->acc1[board.stm ^ 1][i]);
     }
+
+    float pawnHiddenLosses[2][N_PAWN_HIDDEN];
+    for (int i = 0; i < N_PAWN_HIDDEN; i++) {
+      pawnHiddenLosses[board.stm][i] = outputLoss * nn->pawnOutputWeights[i] * ReLUPrime(activations->pawnAcc1[board.stm][i]);
+      pawnHiddenLosses[board.stm ^ 1][i] =
+          outputLoss * nn->pawnOutputWeights[i + N_HIDDEN] * ReLUPrime(activations->pawnAcc1[board.stm ^ 1][i]);
+    }
     // ------------------------------------------------------------------------------------------
 
     // OUTPUT LAYER GRADIENTS -------------------------------------------------------------------
     local[t].outputBias += outputLoss;
+
     for (int i = 0; i < N_HIDDEN; i++) {
       local[t].outputWeights[i] += activations->acc1[board.stm][i] * outputLoss;
       local[t].outputWeights[i + N_HIDDEN] += activations->acc1[board.stm ^ 1][i] * outputLoss;
+    }
+    
+    for (int i = 0; i < N_PAWN_HIDDEN; i++) {
+      local[t].pawnOutputWeights[i] += activations->pawnAcc1[board.stm][i] * outputLoss;
+      local[t].pawnOutputWeights[i + N_PAWN_HIDDEN] += activations->pawnAcc1[board.stm ^ 1][i] * outputLoss;
     }
     // ------------------------------------------------------------------------------------------
 
@@ -163,6 +176,16 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
       for (int j = 0; j < N_HIDDEN; j++) {
         local[t].inputWeights[f->features[board.stm][i] * N_HIDDEN + j] += hiddenLosses[board.stm][j];
         local[t].inputWeights[f->features[board.stm ^ 1][i] * N_HIDDEN + j] += hiddenLosses[board.stm ^ 1][j];
+      }
+    }
+
+    for (int i = 0; i < N_PAWN_HIDDEN; i++)
+      local[t].pawnInputBiases[i] += pawnHiddenLosses[board.stm][i] + pawnHiddenLosses[board.stm ^ 1][i];
+
+    for (int i = 0; i < f->p; i++) {
+      for (int j = 0; j < N_PAWN_HIDDEN; j++) {
+        local[t].pawnInputWeights[f->pawnFeatures[board.stm][i] * N_PAWN_HIDDEN + j] += pawnHiddenLosses[board.stm][j];
+        local[t].pawnInputWeights[f->pawnFeatures[board.stm ^ 1][i] * N_PAWN_HIDDEN + j] += pawnHiddenLosses[board.stm ^ 1][j];
       }
     }
     // ------------------------------------------------------------------------------------------
@@ -182,5 +205,17 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
       g->outputWeights[i].g += local[t].outputWeights[i];
 
     g->outputBias.g += local[t].outputBias;
+
+#pragma omp parallel for schedule(auto) num_threads(2)
+    for (int i = 0; i < N_PAWN_INPUT * N_PAWN_HIDDEN; i++)
+      g->pawnInputWeights[i].g += local[t].pawnInputWeights[i];
+
+#pragma omp parallel for schedule(auto) num_threads(2)
+    for (int i = 0; i < N_PAWN_HIDDEN; i++)
+      g->pawnInputBiases[i].g += local[t].pawnInputBiases[i];
+
+#pragma omp parallel for schedule(auto) num_threads(2)
+    for (int i = 0; i < N_PAWN_HIDDEN * 2; i++)
+      g->pawnOutputWeights[i].g += local[t].pawnOutputWeights[i];
   }
 }

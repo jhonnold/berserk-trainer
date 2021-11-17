@@ -33,14 +33,29 @@ INLINE void ApplyGradients(NN* nn, NNGradients* g) {
     UpdateAndApplyGradient(&nn->outputWeights[i], &g->outputWeights[i]);
 
   UpdateAndApplyGradient(&nn->outputBias, &g->outputBias);
+
+#pragma omp parallel for schedule(auto) num_threads(THREADS)
+  for (int i = 0; i < N_PAWN_INPUT * N_PAWN_HIDDEN; i++)
+    UpdateAndApplyGradient(&nn->pawnInputWeights[i], &g->pawnInputWeights[i]);
+
+#pragma omp parallel for schedule(auto) num_threads(THREADS)
+  for (int i = 0; i < N_PAWN_HIDDEN; i++)
+    UpdateAndApplyGradient(&nn->pawnInputBiases[i], &g->pawnInputBiases[i]);
+
+#pragma omp parallel for schedule(auto) num_threads(THREADS)
+  for (int i = 0; i < N_PAWN_HIDDEN * 2; i++)
+    UpdateAndApplyGradient(&nn->pawnOutputWeights[i], &g->pawnOutputWeights[i]);
 }
 
 INLINE void ClearGradients(NNGradients* gradients) {
   memset(gradients->inputWeights, 0, sizeof(gradients->inputWeights));
   memset(gradients->inputBiases, 0, sizeof(gradients->inputBiases));
-
   memset(gradients->outputWeights, 0, sizeof(gradients->outputWeights));
   gradients->outputBias = (Gradient){.g = 0.0f, .M = 0.0f, .V = 0.0f};
+
+  memset(gradients->pawnInputWeights, 0, sizeof(gradients->pawnInputWeights));
+  memset(gradients->pawnInputBiases, 0, sizeof(gradients->pawnInputBiases));
+  memset(gradients->pawnOutputWeights, 0, sizeof(gradients->pawnOutputWeights));
 }
 
 #endif
