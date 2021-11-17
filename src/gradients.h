@@ -8,7 +8,9 @@
 #include "types.h"
 #include "util.h"
 
-INLINE void ValidateGradient(float calculatedGradient, float* toValidate, NN* nn, DataEntry* entry) {
+INLINE void ValidateGradient(double calculatedGradient, float* toValidate, NN* nn, DataEntry* entry) {
+  const double H = 0.001;
+
   NNAccumulators activations[1];
 
   Features features[1];
@@ -17,25 +19,27 @@ INLINE void ValidateGradient(float calculatedGradient, float* toValidate, NN* nn
   float temp = *toValidate;
 
   // Raise value
-  *toValidate += 0.1f;
+  *toValidate += H;
   NNPredict(nn, features, entry->board.stm, activations);
-  float raisedSigmoidResult = Sigmoid(activations->output);
-  float raisedError = Error(raisedSigmoidResult, entry);
+  double raisedSigmoidResult = Sigmoid(activations->output);
+  double raisedError = Error(raisedSigmoidResult, entry);
   *toValidate = temp;
 
   // Lower value
-  *toValidate -= 0.1f;
+  *toValidate -= H;
   NNPredict(nn, features, entry->board.stm, activations);
-  float loweredSigmoidResult = Sigmoid(activations->output);
-  float loweredError = Error(loweredSigmoidResult, entry);
+  double loweredSigmoidResult = Sigmoid(activations->output);
+  double loweredError = Error(loweredSigmoidResult, entry);
   *toValidate = temp;
 
-  float expectedGradient = (raisedError - loweredError) / 0.2f;
+  double expectedGradient = (raisedError - loweredError) / (2 * H);
 
-  float diff = fabs((calculatedGradient - expectedGradient) / calculatedGradient);
+  double diff = fabs((calculatedGradient - expectedGradient) / calculatedGradient);
 
-  if (diff > 0.05f)
+  if (diff > 0.05)
     printf("Failed! Calculated: %+0.10f, Expected: %+0.10f, Diff: %+0.10f\n", calculatedGradient, expectedGradient, diff);
+  else
+    printf("Correct! Calculated: %+0.10f, Expected: %+0.10f, Diff: %+0.10f\n", calculatedGradient, expectedGradient, diff);
 }
 
 INLINE void UpdateAndApplyGradient(float* v, Gradient* grad) {
@@ -44,7 +48,7 @@ INLINE void UpdateAndApplyGradient(float* v, Gradient* grad) {
 
   grad->M = BETA1 * grad->M + (1.0 - BETA1) * grad->g;
   grad->V = BETA2 * grad->V + (1.0 - BETA2) * grad->g * grad->g;
-  float delta = ALPHA * grad->M / (sqrtf(grad->V) + EPSILON);
+  float delta = ALPHA * grad->M / (sqrt(grad->V) + EPSILON);
 
   *v -= delta;
 

@@ -101,6 +101,6 @@ extern const Square psqt[];
 extern const Piece charToPiece[];
 extern const Piece opposite[];
 extern const int8_t scalar[];
-extern const float SS;
+extern const double SS;
 
 #endif
