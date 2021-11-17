@@ -139,11 +139,11 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     // LOSS CALCULATIONS ------------------------------------------------------------------------
     double outputLoss = SigmoidPrime(out) * ErrorGradient(out, &entry);
 
-    float h2losses[N_HIDDEN_2];
+    double h2losses[N_HIDDEN_2];
     for (int i = 0; i < N_HIDDEN_2; i++)
       h2losses[i] = outputLoss * nn->outputWeights[i] * CReLUPrime(activations->acc2[i]);
 
-    float hiddenLosses[2][N_HIDDEN] = {0};
+    double hiddenLosses[2][N_HIDDEN] = {0};
     for (int i = 0; i < N_HIDDEN; i++) {
       for (int j = 0; j < N_HIDDEN_2; j++) {
         hiddenLosses[board.stm][i] +=
@@ -155,16 +155,24 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     // ------------------------------------------------------------------------------------------
 
     // OUTPUT LAYER GRADIENTS -------------------------------------------------------------------
+    ValidateGradient(outputLoss, &nn->outputBias, nn, &entry);
     local[t].outputBias += outputLoss;
-    for (int i = 0; i < N_HIDDEN_2; i++)
+
+    for (int i = 0; i < N_HIDDEN_2; i++) {
+      ValidateGradient(activations->acc2[i] * outputLoss, &nn->outputWeights[i], nn, &entry);
       local[t].outputWeights[i] += activations->acc2[i] * outputLoss;
+    }
     // ------------------------------------------------------------------------------------------
 
     // SECOND LAYER GRADIENTS -------------------------------------------------------------------
     for (int i = 0; i < N_HIDDEN_2; i++) {
+      ValidateGradient(h2losses[i], &nn->h2Biases[i], nn, &entry);
       local[t].h2Biases[i] += h2losses[i];
 
       for (int j = 0; j < N_HIDDEN; j++) {
+        ValidateGradient(activations->acc1[board.stm][j] * h2losses[i], &nn->h2Weights[i * 2 * N_HIDDEN + j], nn, &entry);
+        ValidateGradient(activations->acc1[board.stm ^ 1][j] * h2losses[i], &nn->h2Weights[i * 2 * N_HIDDEN + j + N_HIDDEN], nn, &entry);
+
         local[t].h2Weights[i * 2 * N_HIDDEN + j] += activations->acc1[board.stm][j] * h2losses[i];
         local[t].h2Weights[i * 2 * N_HIDDEN + j + N_HIDDEN] += activations->acc1[board.stm ^ 1][j] * h2losses[i];
       }
@@ -173,6 +181,7 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
 
     // INPUT LAYER GRADIENTS --------------------------------------------------------------------
     for (int i = 0; i < N_HIDDEN; i++) {
+      ValidateGradient(hiddenLosses[board.stm][i] + hiddenLosses[board.stm ^ 1][i], &nn->inputBiases[i], nn, &entry);
       local[t].inputBiases[i] += hiddenLosses[board.stm][i] + hiddenLosses[board.stm ^ 1][i];
     }
 

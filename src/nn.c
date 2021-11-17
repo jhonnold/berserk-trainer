@@ -78,21 +78,21 @@ NN* LoadRandomNN() {
   NN* nn = malloc(sizeof(NN));
 
   for (int i = 0; i < N_INPUT * N_HIDDEN; i++)
-    nn->inputWeights[i] = Random(N_INPUT * N_HIDDEN);
+    nn->inputWeights[i] = Random(N_INPUT);
 
   for (int i = 0; i < N_HIDDEN; i++)
-    nn->inputBiases[i] = Random(N_HIDDEN);
+    nn->inputBiases[i] = 0.0;
 
   for (int i = 0; i < 2 * N_HIDDEN * N_HIDDEN_2; i++)
-    nn->h2Weights[i] = Random(2 * N_HIDDEN * N_HIDDEN_2);
+    nn->h2Weights[i] = Random(2 * N_HIDDEN);
 
   for (int i = 0; i < N_HIDDEN_2; i++)
-    nn->h2Biases[i] = Random(N_HIDDEN_2);
+    nn->h2Biases[i] = 0.0;
 
   for (int i = 0; i < N_HIDDEN_2; i++)
     nn->outputWeights[i] = Random(N_HIDDEN_2);
 
-  nn->outputBias = Random(1);
+  nn->outputBias = 0.0;
 
   return nn;
 }

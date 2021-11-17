@@ -17,7 +17,7 @@ INLINE double SigmoidPrime(double sig) { return SS * sig * (1.0 - sig); }
 
 INLINE int ReLUPrime(float s) { return s > 0.0; }
 
-INLINE float CReLUPrime(float s) { return s > 0.0f && s < 1.0f; }
+INLINE int CReLUPrime(float s) { return s > 0.0 && s < 1.0; }
 
 INLINE uint64_t NetworkHash(NN* nn) {
   uint64_t hash = 0;
@@ -36,9 +36,9 @@ INLINE uint64_t NetworkHash(NN* nn) {
   return hash;
 }
 
-INLINE float Random(int s) {
-  float m = sqrt(2.0f / s);
-  float r = rand() * m / RAND_MAX;
+INLINE double Random(int s) {
+  double m = sqrt(2.0 / s);
+  double r = rand() * m / RAND_MAX;
   return !(rand() & 1) ? -r : r;
 }
 
