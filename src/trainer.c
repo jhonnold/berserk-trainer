@@ -187,27 +187,31 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     // ------------------------------------------------------------------------------------------
   }
 
-  for (int t = 0; t < THREADS; t++) {
-#pragma omp parallel for schedule(auto) num_threads(2)
-    for (int i = 0; i < N_INPUT * N_HIDDEN; i++)
+#pragma omp parallel for schedule(auto) num_threads(4)
+  for (int i = 0; i < N_INPUT * N_HIDDEN; i++)
+    for (int t = 0; t < THREADS; t++)
       g->inputWeights[i].g += local[t].inputWeights[i];
 
 #pragma omp parallel for schedule(auto) num_threads(2)
-    for (int i = 0; i < N_HIDDEN; i++)
+  for (int i = 0; i < N_HIDDEN; i++)
+    for (int t = 0; t < THREADS; t++)
       g->inputBiases[i].g += local[t].inputBiases[i];
 
 #pragma omp parallel for schedule(auto) num_threads(2)
-    for (int i = 0; i < 2 * N_HIDDEN * N_HIDDEN_2; i++)
+  for (int i = 0; i < 2 * N_HIDDEN * N_HIDDEN_2; i++)
+    for (int t = 0; t < THREADS; t++)
       g->h2Weights[i].g += local[t].h2Weights[i];
 
 #pragma omp parallel for schedule(auto) num_threads(2)
-    for (int i = 0; i < N_HIDDEN_2; i++)
+  for (int i = 0; i < N_HIDDEN_2; i++)
+    for (int t = 0; t < THREADS; t++)
       g->h2Biases[i].g += local[t].h2Biases[i];
 
 #pragma omp parallel for schedule(auto) num_threads(2)
-    for (int i = 0; i < N_HIDDEN_2; i++)
+  for (int i = 0; i < N_HIDDEN_2; i++)
+    for (int t = 0; t < THREADS; t++)
       g->outputWeights[i].g += local[t].outputWeights[i];
 
+  for (int t = 0; t < THREADS; t++)
     g->outputBias.g += local[t].outputBias;
-  }
 }
