@@ -11,9 +11,9 @@
 
 long GetTimeMS();
 
-INLINE double Sigmoid(double s) { return 1.0 / (1.0 + exp(-SS * s)); }
+INLINE float Sigmoid(float s) { return 1.0 / (1.0 + exp(-SS * s)); }
 
-INLINE double SigmoidPrime(double sig) { return SS * sig * (1.0 - sig); }
+INLINE float SigmoidPrime(float sig) { return SS * sig * (1.0 - sig); }
 
 INLINE int ReLUPrime(float s) { return s > 0.0; }
 
@@ -37,7 +37,7 @@ INLINE uint64_t NetworkHash(NN* nn) {
 }
 
 INLINE double Random(int s) {
-  double m = sqrt(2.0 / s);
+  double m = sqrtf(2.0 / s);
   double r = rand() * m / RAND_MAX;
   return !(rand() & 1) ? -r : r;
 }

@@ -48,7 +48,7 @@ INLINE void UpdateAndApplyGradient(float* v, Gradient* grad) {
 
   grad->M = BETA1 * grad->M + (1.0 - BETA1) * grad->g;
   grad->V = BETA2 * grad->V + (1.0 - BETA2) * grad->g * grad->g;
-  float delta = ALPHA * grad->M / (sqrt(grad->V) + EPSILON);
+  float delta = ALPHA * grad->M / (sqrtf(grad->V) + EPSILON);
 
   *v -= delta;
 

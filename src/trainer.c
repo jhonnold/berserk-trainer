@@ -97,8 +97,8 @@ int main(int argc, char** argv) {
   }
 }
 
-double TotalError(DataSet* data, NN* nn) {
-  double e = 0.0f;
+float TotalError(DataSet* data, NN* nn) {
+  float e = 0.0f;
 
 #pragma omp parallel for schedule(auto) num_threads(THREADS) reduction(+ : e)
   for (int i = 0; i < data->n; i++) {
@@ -134,16 +134,16 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     ToFeatures(&board, f);
     NNPredict(nn, f, board.stm, activations);
 
-    double out = Sigmoid(activations->output);
+    float out = Sigmoid(activations->output);
 
     // LOSS CALCULATIONS ------------------------------------------------------------------------
-    double outputLoss = SigmoidPrime(out) * ErrorGradient(out, &entry);
+    float outputLoss = SigmoidPrime(out) * ErrorGradient(out, &entry);
 
-    double h2losses[N_HIDDEN_2];
+    float h2losses[N_HIDDEN_2];
     for (int i = 0; i < N_HIDDEN_2; i++)
       h2losses[i] = outputLoss * nn->outputWeights[i] * ReLUPrime(activations->acc2[i]);
 
-    double hiddenLosses[2][N_HIDDEN] = {0};
+    float hiddenLosses[2][N_HIDDEN] = {0};
     for (int i = 0; i < N_HIDDEN; i++) {
       for (int j = 0; j < N_HIDDEN_2; j++) {
         hiddenLosses[board.stm][i] +=
