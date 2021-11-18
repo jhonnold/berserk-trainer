@@ -23,11 +23,6 @@ void LoadEntries(char* path, DataSet* data, int n, int offset) {
     fgets(in, 128, fp);
 
   while (p < n && fgets(in, 128, fp)) {
-    if (p < offset) {
-      p++;
-      continue;
-    }
-
     LoadDataEntry(in, &data->entries[p++]);
 
     if (p % 16384 == 0)
