@@ -9,24 +9,28 @@
 #include "util.h"
 
 
-void LoadEntries(char* path, DataSet* data, int n) {
+void LoadEntries(char* path, DataSet* data, int n, int offset) {
   FILE* fp = fopen(path, "r");
   if (fp == NULL) {
     printf("Cannot open file: %s!\n", path);
     exit(1);
   }
 
-  int p = 0;
   char in[128];
+  int p = 0;
+
+  while (offset-- > 0)
+    fgets(in, 128, fp);
+
   while (p < n && fgets(in, 128, fp)) {
     LoadDataEntry(in, &data->entries[p++]);
 
     if (p % 16384 == 0)
-      printf("\rLoaded positions: [%9d]", p);
+      printf("\rLoaded positions: [%10d]", p);
   }
 
   data->n = p;
-  printf("\rLoaded positions: [%9d]\n", p);
+  printf("\rLoaded positions: [%10d]\n", p);
 }
 
 void LoadDataEntry(char* buffer, DataEntry* result) {

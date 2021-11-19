@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
   char nnPath[128] = {0};
   char entriesPath[128] = {0};
 
-  while ((c = getopt(argc, argv, "sd:n:")) != -1) {
+  while ((c = getopt(argc, argv, "d:n:")) != -1) {
     switch (c) {
     case 'd':
       strcpy(entriesPath, optarg);
@@ -49,15 +49,15 @@ int main(int argc, char** argv) {
 
   printf("Loading entries from %s\n", entriesPath);
 
-  DataSet* data = malloc(sizeof(DataSet));
-  data->n = 0;
-  data->entries = malloc(sizeof(DataEntry) * MAX_POSITIONS);
-  LoadEntries(entriesPath, data, MAX_POSITIONS);
-
   DataSet* validation = malloc(sizeof(DataSet));
   validation->n = 0;
   validation->entries = malloc(sizeof(DataEntry) * VALIDATION_POSITIONS);
-  LoadEntries(entriesPath, validation, VALIDATION_POSITIONS);
+  LoadEntries(entriesPath, validation, VALIDATION_POSITIONS, 0);
+
+  DataSet* data = malloc(sizeof(DataSet));
+  data->n = 0;
+  data->entries = malloc(sizeof(DataEntry) * MAX_POSITIONS);
+  LoadEntries(entriesPath, data, MAX_POSITIONS, VALIDATION_POSITIONS);
 
   NNGradients* gradients = malloc(sizeof(NNGradients));
   ClearGradients(gradients);
@@ -191,19 +191,22 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     // ------------------------------------------------------------------------------------------
   }
 
-  for (int t = 0; t < THREADS; t++) {
-#pragma omp parallel for schedule(auto) num_threads(2)
-    for (int i = 0; i < N_INPUT * N_HIDDEN; i++)
+#pragma omp parallel for schedule(auto) num_threads(4)
+  for (int i = 0; i < N_INPUT * N_HIDDEN; i++)
+    for (int t = 0; t < THREADS; t++)
       g->inputWeights[i].g += local[t].inputWeights[i];
 
 #pragma omp parallel for schedule(auto) num_threads(2)
-    for (int i = 0; i < N_HIDDEN; i++)
+  for (int i = 0; i < N_HIDDEN; i++)
+    for (int t = 0; t < THREADS; t++)
       g->inputBiases[i].g += local[t].inputBiases[i];
 
 #pragma omp parallel for schedule(auto) num_threads(2)
-    for (int i = 0; i < N_HIDDEN * 2; i++)
+  for (int i = 0; i < N_HIDDEN * 2; i++)
+    for (int t = 0; t < THREADS; t++)
       g->outputWeights[i].g += local[t].outputWeights[i];
 
+  for (int t = 0; t < THREADS; t++)
     g->outputBias.g += local[t].outputBias;
 
 #pragma omp parallel for schedule(auto) num_threads(2)
