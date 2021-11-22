@@ -8,6 +8,7 @@
 #include "bits.h"
 #include "board.h"
 #include "nn.h"
+#include "random.h"
 
 const int NETWORK_MAGIC = 'B' | 'R' << 8 | 'K' << 16 | 'R' << 24;
 
@@ -78,19 +79,19 @@ NN* LoadRandomNN() {
   NN* nn = malloc(sizeof(NN));
 
   for (int i = 0; i < N_INPUT * N_HIDDEN; i++)
-    nn->inputWeights[i] = Random(N_INPUT);
+    nn->inputWeights[i] = RandomGaussian(0, sqrt(2.0 / 64));
 
   for (int i = 0; i < N_HIDDEN; i++)
-    nn->inputBiases[i] = 0.0;
+    nn->inputBiases[i] = 0;
 
   for (int i = 0; i < 2 * N_HIDDEN * N_HIDDEN_2; i++)
-    nn->h2Weights[i] = Random(2 * N_HIDDEN);
+    nn->h2Weights[i] = RandomGaussian(0, sqrt(2.0 / N_HIDDEN));
 
   for (int i = 0; i < N_HIDDEN_2; i++)
     nn->h2Biases[i] = 0.0;
 
   for (int i = 0; i < N_HIDDEN_2; i++)
-    nn->outputWeights[i] = Random(N_HIDDEN_2);
+    nn->outputWeights[i] = RandomGaussian(0, sqrt(2.0 / N_HIDDEN_2));
 
   nn->outputBias = 0.0;
 

@@ -29,12 +29,12 @@ INLINE void CReLU(float* v, const size_t n) {
   const size_t chunks =  n / width;
 
   const __m256 zero = _mm256_setzero_ps();
-  const __m256 one = _mm256_set1_ps(1.0f);
+  const __m256 max = _mm256_set1_ps(CRELU_MAX);
 
   __m256* vector = (__m256*) v;
 
   for (size_t j = 0; j < chunks; j++)
-    vector[j] = _mm256_min_ps(one, _mm256_max_ps(zero, vector[j]));
+    vector[j] = _mm256_min_ps(max, _mm256_max_ps(zero, vector[j]));
 }
 
 INLINE float DotProduct(float* v1, float* v2, const size_t n) {
