@@ -17,6 +17,13 @@ INLINE Feature idx(Piece pc, Square sq, Square king, const Color view) {
     return inv(pc) * 64 + kIdx(king, sq) * 32 + psqt[sq];
 }
 
+INLINE Feature pawnIdx(Piece pc, Square sq, Square king, const Color view) {
+  if (view == WHITE)
+    return (pc != WHITE_PAWN) * 48 * 64 + mirror(king) * 48 + mirror(sq) - 8;
+  else
+    return (pc != BLACK_PAWN) * 48 * 64 + king * 48 + sq - 8;
+}
+
 INLINE Piece getPiece(uint8_t pieces[16], int n) { return (pieces[n / 2] >> ((n & 1) * 4)) & 0xF; }
 
 void ToFeatures(Board* board, Features* f);

@@ -7,7 +7,7 @@
 #include "board.h"
 
 void ToFeatures(Board* board, Features* f) {
-  f->n = 0;
+  f->n = f->p = 0;
 
   uint64_t bb = board->occupancies;
 
@@ -17,8 +17,13 @@ void ToFeatures(Board* board, Features* f) {
 
     f->features[WHITE][f->n] = idx(pc, sq, board->kings[WHITE], WHITE);
     f->features[BLACK][f->n] = idx(pc, sq, board->kings[BLACK], BLACK);
-
     f->n++;
+
+    if (pc == WHITE_PAWN || pc == BLACK_PAWN) {
+      f->pawnFeatures[WHITE][f->p] = pawnIdx(pc, sq, board->kings[WHITE], WHITE);
+      f->pawnFeatures[BLACK][f->p] = pawnIdx(pc, sq, board->kings[BLACK], BLACK);
+      f->p++;
+    }
   }
 }
 

@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
     }
 
     char buffer[64];
-    sprintf(buffer, "../nets/berserk-ks.e%d.2x%d.nn", epoch, N_HIDDEN);
+    sprintf(buffer, "../nets/berserk-ks+p.e%d.2x%d.2x%d.nn", epoch, N_HIDDEN, N_P_HIDDEN);
     SaveNN(nn, buffer);
 
     printf("Calculating Validation Error...\r");
@@ -145,6 +145,14 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
       hiddenLosses[board.stm ^ 1][i] =
           outputLoss * nn->outputWeights[i + N_HIDDEN] * ReLUPrime(activations->acc1[board.stm ^ 1][i]);
     }
+
+    float pawnHiddenLosses[2][N_P_HIDDEN];
+    for (int i = 0; i < N_P_HIDDEN; i++) {
+      pawnHiddenLosses[board.stm][i] =
+          outputLoss * nn->pawnOutputWeights[i] * ReLUPrime(activations->pAcc1[board.stm][i]);
+      pawnHiddenLosses[board.stm ^ 1][i] =
+          outputLoss * nn->pawnOutputWeights[i + N_P_HIDDEN] * ReLUPrime(activations->pAcc1[board.stm ^ 1][i]);
+    }
     // ------------------------------------------------------------------------------------------
 
     // OUTPUT LAYER GRADIENTS -------------------------------------------------------------------
@@ -153,24 +161,35 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
       local[t].outputWeights[i] += activations->acc1[board.stm][i] * outputLoss;
       local[t].outputWeights[i + N_HIDDEN] += activations->acc1[board.stm ^ 1][i] * outputLoss;
     }
+
+    local[t].pawnOutputBias += outputLoss;
+    for (int i = 0; i < N_P_HIDDEN; i++) {
+      local[t].pawnOutputWeights[i] += activations->pAcc1[board.stm][i] * outputLoss;
+      local[t].pawnOutputWeights[i + N_P_HIDDEN] += activations->pAcc1[board.stm ^ 1][i] * outputLoss;
+    }
     // ------------------------------------------------------------------------------------------
 
     // INPUT LAYER GRADIENTS --------------------------------------------------------------------
     for (int i = 0; i < N_HIDDEN; i++) {
-      float stmLasso = LAMBDA * (activations->acc1[board.stm][i] > 0);
-      float xstmLasso = LAMBDA * (activations->acc1[board.stm ^ 1][i] > 0);
-
-      local[t].inputBiases[i] += hiddenLosses[board.stm][i] + hiddenLosses[board.stm ^ 1][i] + stmLasso + xstmLasso;
+      local[t].inputBiases[i] += hiddenLosses[board.stm][i] + hiddenLosses[board.stm ^ 1][i];
     }
 
     for (int i = 0; i < f->n; i++) {
       for (int j = 0; j < N_HIDDEN; j++) {
-        float stmLasso = LAMBDA * (activations->acc1[board.stm][j] > 0);
-        float xstmLasso = LAMBDA * (activations->acc1[board.stm ^ 1][j] > 0);
+        local[t].inputWeights[f->features[board.stm][i] * N_HIDDEN + j] += hiddenLosses[board.stm][j];
+        local[t].inputWeights[f->features[board.stm ^ 1][i] * N_HIDDEN + j] += hiddenLosses[board.stm ^ 1][j];
+      }
+    }
 
-        local[t].inputWeights[f->features[board.stm][i] * N_HIDDEN + j] += hiddenLosses[board.stm][j] + stmLasso;
-        local[t].inputWeights[f->features[board.stm ^ 1][i] * N_HIDDEN + j] +=
-            hiddenLosses[board.stm ^ 1][j] + xstmLasso;
+    for (int i = 0; i < N_P_HIDDEN; i++) {
+      local[t].pawnInputBiases[i] += pawnHiddenLosses[board.stm][i] + pawnHiddenLosses[board.stm ^ 1][i];
+    }
+
+    for (int i = 0; i < f->p; i++) {
+      for (int j = 0; j < N_P_HIDDEN; j++) {
+        local[t].pawnInputWeights[f->pawnFeatures[board.stm][i] * N_P_HIDDEN + j] += pawnHiddenLosses[board.stm][j];
+        local[t].pawnInputWeights[f->pawnFeatures[board.stm ^ 1][i] * N_P_HIDDEN + j] +=
+            pawnHiddenLosses[board.stm ^ 1][j];
       }
     }
     // ------------------------------------------------------------------------------------------
@@ -193,4 +212,22 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
 
   for (int t = 0; t < THREADS; t++)
     g->outputBias.g += local[t].outputBias;
+
+#pragma omp parallel for schedule(auto) num_threads(4)
+  for (int i = 0; i < N_P_INPUT * N_P_HIDDEN; i++)
+    for (int t = 0; t < THREADS; t++)
+      g->pawnInputWeights[i].g += local[t].pawnInputWeights[i];
+
+#pragma omp parallel for schedule(auto) num_threads(2)
+  for (int i = 0; i < N_P_HIDDEN; i++)
+    for (int t = 0; t < THREADS; t++)
+      g->pawnInputBiases[i].g += local[t].pawnInputBiases[i];
+
+#pragma omp parallel for schedule(auto) num_threads(2)
+  for (int i = 0; i < N_P_HIDDEN * 2; i++)
+    for (int t = 0; t < THREADS; t++)
+      g->pawnOutputWeights[i].g += local[t].pawnOutputWeights[i];
+
+  for (int t = 0; t < THREADS; t++)
+    g->pawnOutputBias.g += local[t].pawnOutputBias;
 }
