@@ -9,7 +9,7 @@
 #define N_OUTPUT 1
 
 #define N_P_INPUT 6144
-#define N_P_HIDDEN 64
+#define N_P_HIDDEN 128
 #define N_P_OUTPUT 1
 
 #define THREADS 16
@@ -19,6 +19,8 @@
 #define BETA1 0.9f
 #define BETA2 0.999f
 #define EPSILON 1e-8f
+
+#define LAMBDA (1.0 / 1048576.0)
 
 #define MAX_POSITIONS 1500000000
 #define VALIDATION_POSITIONS 5000000
