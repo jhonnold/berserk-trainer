@@ -4,7 +4,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define N_INPUT 768
+#define N_INPUT 6784
 #define N_HIDDEN 512
 #define N_OUTPUT 1
 
@@ -25,16 +25,16 @@
 
 enum {
   WHITE_PAWN,
-  WHITE_KNIGHT,
-  WHITE_BISHOP,
-  WHITE_ROOK,
-  WHITE_QUEEN,
-  WHITE_KING,
   BLACK_PAWN,
+  WHITE_KNIGHT,
   BLACK_KNIGHT,
+  WHITE_BISHOP,
   BLACK_BISHOP,
+  WHITE_ROOK,
   BLACK_ROOK,
+  WHITE_QUEEN,
   BLACK_QUEEN,
+  WHITE_KING,
   BLACK_KING,
 };
 

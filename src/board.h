@@ -11,10 +11,17 @@ INLINE int8_t kIdx(Square k, Square s) { return (k & 4) == (s & 4); }
 INLINE Piece inv(Piece p) { return opposite[p]; }
 
 INLINE Feature idx(Piece pc, Square sq, Square king, const Color view) {
-  if (view == WHITE)
-    return pc * 64 + kIdx(king, sq) * 32 + psqt[mirror(sq)];
-  else
-    return inv(pc) * 64 + kIdx(king, sq) * 32 + psqt[sq];
+  if (view == WHITE) {
+    if (pc == WHITE_PAWN || pc == BLACK_PAWN)
+      return pc * 48 * 64 + mirror(king) * 48 + mirror(sq) - 8;
+    else
+      return (2 * 48 * 64) + (pc - 2) * 64 + kIdx(king, sq) * 32 + psqt[mirror(sq)];
+  } else {
+    if (pc == WHITE_PAWN || pc == BLACK_PAWN)
+      return inv(pc) * 48 * 64 + king * 48 + sq - 8;
+    else
+      return (2 * 48 * 64) + (inv(pc) - 2) * 64 + kIdx(king, sq) * 32 + psqt[sq];
+  }
 }
 
 INLINE Piece getPiece(uint8_t pieces[16], int n) { return (pieces[n / 2] >> ((n & 1) * 4)) & 0xF; }
