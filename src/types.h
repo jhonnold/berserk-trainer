@@ -18,7 +18,7 @@
 
 #define LAMBDA (1.0 / 1048576.0)
 
-#define EVAL_WEIGHT 0.75f
+#define EVAL_WEIGHT 0
 #define WDL_WEIGHT (1.0f - EVAL_WEIGHT)
 
 #define MAX_POSITIONS 1500000000
