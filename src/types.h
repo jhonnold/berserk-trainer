@@ -11,7 +11,7 @@
 #define THREADS 16
 #define BATCH_SIZE 16384
 
-#define ALPHA 0.01f
+#define ALPHA 1e-3f
 #define BETA1 0.9f
 #define BETA2 0.999f
 #define EPSILON 1e-8f
@@ -85,6 +85,7 @@ typedef struct {
 } NNAccumulators;
 
 typedef struct {
+  int epoch;
   float g, M, V;
 } Gradient;
 
