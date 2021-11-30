@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
     }
 
     char buffer[64];
-    sprintf(buffer, "../nets/berserk-ks.e%d.2x%d.nn", epoch, N_HIDDEN);
+    sprintf(buffer, "../nets/berserk-ks.b%d.e%d.2x%d.nn", N_BUCKETS, epoch, N_HIDDEN);
     SaveNN(nn, buffer);
 
     printf("Calculating Validation Error...\r");
@@ -132,6 +132,8 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     Features f[1];
 
     ToFeatures(&board, f);
+    int bucket = getBucket(f);
+
     NNPredict(nn, f, board.stm, activations);
 
     float out = Sigmoid(activations->output);
@@ -141,17 +143,18 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
 
     float hiddenLosses[2][N_HIDDEN];
     for (int i = 0; i < N_HIDDEN; i++) {
-      hiddenLosses[board.stm][i] = outputLoss * nn->outputWeights[i] * ReLUPrime(activations->acc1[board.stm][i]);
+      hiddenLosses[board.stm][i] =
+          outputLoss * nn->outputWeights[bucket][i] * ReLUPrime(activations->acc1[board.stm][i]);
       hiddenLosses[board.stm ^ 1][i] =
-          outputLoss * nn->outputWeights[i + N_HIDDEN] * ReLUPrime(activations->acc1[board.stm ^ 1][i]);
+          outputLoss * nn->outputWeights[bucket][i + N_HIDDEN] * ReLUPrime(activations->acc1[board.stm ^ 1][i]);
     }
     // ------------------------------------------------------------------------------------------
 
     // OUTPUT LAYER GRADIENTS -------------------------------------------------------------------
-    local[t].outputBias += outputLoss;
+    local[t].outputBias[bucket] += outputLoss;
     for (int i = 0; i < N_HIDDEN; i++) {
-      local[t].outputWeights[i] += activations->acc1[board.stm][i] * outputLoss;
-      local[t].outputWeights[i + N_HIDDEN] += activations->acc1[board.stm ^ 1][i] * outputLoss;
+      local[t].outputWeights[bucket][i] += activations->acc1[board.stm][i] * outputLoss;
+      local[t].outputWeights[bucket][i + N_HIDDEN] += activations->acc1[board.stm ^ 1][i] * outputLoss;
     }
     // ------------------------------------------------------------------------------------------
 
@@ -189,8 +192,10 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
 #pragma omp parallel for schedule(auto) num_threads(2)
   for (int i = 0; i < N_HIDDEN * 2; i++)
     for (int t = 0; t < THREADS; t++)
-      g->outputWeights[i].g += local[t].outputWeights[i];
+      for (int b = 0; b < N_BUCKETS; b++)
+        g->outputWeights[b][i].g += local[t].outputWeights[b][i];
 
   for (int t = 0; t < THREADS; t++)
-    g->outputBias.g += local[t].outputBias;
+    for (int b = 0; b < N_BUCKETS; b++)
+      g->outputBias[b].g += local[t].outputBias[b];
 }
