@@ -18,11 +18,8 @@
 
 #define LAMBDA (1.0 / 1048576.0)
 
-#define EVAL_WEIGHT 0
-#define WDL_WEIGHT (1.0f - EVAL_WEIGHT)
-
-#define MAX_POSITIONS 1500000000
-#define VALIDATION_POSITIONS 5000000
+#define MAX_POSITIONS 15000000
+#define VALIDATION_POSITIONS 500000
 
 #define CRELU_MAX 256
 
@@ -49,7 +46,7 @@ typedef uint8_t Piece;
 typedef uint16_t Feature;
 
 typedef struct {
-  Color stm;
+  Color stm, wdl;
   Square kings[2];
   uint64_t occupancies;
   uint8_t pieces[16];
@@ -61,14 +58,8 @@ typedef struct {
 } Features;
 
 typedef struct {
-  int8_t wdl;
-  float eval;
-  Board board;
-} DataEntry;
-
-typedef struct {
   int n;
-  DataEntry* entries;
+  Board* entries;
 } DataSet;
 
 typedef struct {

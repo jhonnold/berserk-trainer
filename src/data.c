@@ -33,9 +33,9 @@ void LoadEntries(char* path, DataSet* data, int n, int offset) {
   printf("\rLoaded positions: [%10d]\n", p);
 }
 
-void LoadDataEntry(char* buffer, DataEntry* result) {
-  result->board.stm = strstr(buffer, "w ") ? WHITE : BLACK;
-  ParseFen(buffer, &result->board);
+void LoadDataEntry(char* buffer, Board* result) {
+  result->stm = strstr(buffer, "w ") ? WHITE : BLACK;
+  ParseFen(buffer, result);
 
   if (strstr(buffer, "[1.0]"))
     result->wdl = 2;
@@ -48,18 +48,13 @@ void LoadDataEntry(char* buffer, DataEntry* result) {
     exit(1);
   }
 
-  int eval = atoi(strstr(buffer, "] ") + 2);
-  result->eval = Sigmoid(eval);
-
   // Invert for black to move
-  if (result->board.stm == BLACK) {
+  if (result->stm == BLACK)
     result->wdl = 2 - result->wdl;
-    result->eval = 1 - result->eval;
-  }
 }
 
 void ShuffleData(DataSet* data) {
-  DataEntry temp;
+  Board temp;
 
   for (int i = 0; i < data->n; i++) {
     int j = RandomUInt64() % data->n;
