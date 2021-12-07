@@ -16,8 +16,8 @@ void NNPredict(NN* nn, Features* f, Color stm, NNAccumulators* results) {
   results->output = 0.0f;
 
   // Apply first layer
-  memcpy(results->acc1[WHITE], nn->inputBiases, sizeof(float) * N_HIDDEN);
-  memcpy(results->acc1[BLACK], nn->inputBiases, sizeof(float) * N_HIDDEN);
+  memcpy(results->acc1[stm], nn->inputBiases, sizeof(float) * N_HIDDEN);
+  memcpy(results->acc1[stm ^ 1], &nn->inputBiases[N_HIDDEN], sizeof(float) * N_HIDDEN);
 
   for (int i = 0; i < f->n; i++) {
     for (size_t j = 0; j < N_HIDDEN; j++) {
@@ -56,7 +56,7 @@ NN* LoadNN(char* path) {
   NN* nn = malloc(sizeof(NN));
 
   fread(nn->inputWeights, sizeof(float), N_INPUT * N_HIDDEN, fp);
-  fread(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
+  fread(nn->inputBiases, sizeof(float), N_HIDDEN * 2, fp);
   fread(nn->outputWeights, sizeof(float), N_HIDDEN * 2, fp);
   fread(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
 
@@ -72,7 +72,7 @@ NN* LoadRandomNN() {
   for (int i = 0; i < N_INPUT * N_HIDDEN; i++)
     nn->inputWeights[i] = RandomGaussian(0, sqrt(1.0 / 32));
 
-  for (int i = 0; i < N_HIDDEN; i++)
+  for (int i = 0; i < N_HIDDEN * 2; i++)
     nn->inputBiases[i] = 0;
 
   for (int i = 0; i < N_HIDDEN * 2; i++)
@@ -96,7 +96,7 @@ void SaveNN(NN* nn, char* path) {
   fwrite(&hash, sizeof(uint64_t), 1, fp);
 
   fwrite(nn->inputWeights, sizeof(float), N_INPUT * N_HIDDEN, fp);
-  fwrite(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
+  fwrite(nn->inputBiases, sizeof(float), N_HIDDEN * 2, fp);
   fwrite(nn->outputWeights, sizeof(float), N_HIDDEN * 2, fp);
   fwrite(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
 

@@ -159,7 +159,8 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
       float stmLasso = LAMBDA * (activations->acc1[board.stm][i] > 0);
       float xstmLasso = LAMBDA * (activations->acc1[board.stm ^ 1][i] > 0);
 
-      local[t].inputBiases[i] += hiddenLosses[board.stm][i] + hiddenLosses[board.stm ^ 1][i] + stmLasso + xstmLasso;
+      local[t].inputBiases[i] += hiddenLosses[board.stm][i] + stmLasso;
+      local[t].inputBiases[i + N_HIDDEN] += hiddenLosses[board.stm ^ 1][i] + xstmLasso;
     }
 
     for (int i = 0; i < f->n; i++) {
@@ -181,7 +182,7 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
       g->inputWeights[i].g += local[t].inputWeights[i];
 
 #pragma omp parallel for schedule(auto) num_threads(2)
-  for (int i = 0; i < N_HIDDEN; i++)
+  for (int i = 0; i < N_HIDDEN * 2; i++)
     for (int t = 0; t < THREADS; t++)
       g->inputBiases[i].g += local[t].inputBiases[i];
 

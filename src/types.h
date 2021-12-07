@@ -66,7 +66,7 @@ typedef struct {
   float outputBias;
   float outputWeights[2 * N_HIDDEN] __attribute__((aligned(64)));
 
-  float inputBiases[N_HIDDEN] __attribute__((aligned(64)));
+  float inputBiases[2 * N_HIDDEN] __attribute__((aligned(64)));
   float inputWeights[N_INPUT * N_HIDDEN] __attribute__((aligned(64)));
 } NN;
 
@@ -83,7 +83,7 @@ typedef struct {
   Gradient outputBias;
   Gradient outputWeights[2 * N_HIDDEN];
 
-  Gradient inputBiases[N_HIDDEN];
+  Gradient inputBiases[2 * N_HIDDEN];
   Gradient inputWeights[N_INPUT * N_HIDDEN];
 } NNGradients;
 
@@ -91,7 +91,7 @@ typedef struct {
   float outputBias;
   float outputWeights[2 * N_HIDDEN];
 
-  float inputBiases[N_HIDDEN];
+  float inputBiases[2 * N_HIDDEN];
   float inputWeights[N_INPUT * N_HIDDEN];
 } BatchGradients;
 
