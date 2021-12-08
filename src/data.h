@@ -4,7 +4,7 @@
 #include "types.h"
 
 void LoadEntries(char* path, DataSet* data, int n, int offset);
-void LoadDataEntry(char* buffer, DataEntry* result);
+void LoadDataEntry(char* buffer, Board* result);
 void ShuffleData(DataSet* data);
 
 #endif

@@ -51,12 +51,12 @@ int main(int argc, char** argv) {
 
   DataSet* validation = malloc(sizeof(DataSet));
   validation->n = 0;
-  validation->entries = malloc(sizeof(DataEntry) * VALIDATION_POSITIONS);
+  validation->entries = malloc(sizeof(Board) * VALIDATION_POSITIONS);
   LoadEntries(entriesPath, validation, VALIDATION_POSITIONS, 0);
 
   DataSet* data = malloc(sizeof(DataSet));
   data->n = 0;
-  data->entries = malloc(sizeof(DataEntry) * MAX_POSITIONS);
+  data->entries = malloc(sizeof(Board) * MAX_POSITIONS);
   LoadEntries(entriesPath, data, MAX_POSITIONS, VALIDATION_POSITIONS);
 
   NNGradients* gradients = malloc(sizeof(NNGradients));
@@ -102,15 +102,15 @@ float TotalError(DataSet* data, NN* nn) {
 
 #pragma omp parallel for schedule(auto) num_threads(THREADS) reduction(+ : e)
   for (int i = 0; i < data->n; i++) {
-    DataEntry entry = data->entries[i];
+    Board* board = &data->entries[i];
 
     NNAccumulators results[1];
     Features f[1];
 
-    ToFeatures(&entry.board, f);
-    NNPredict(nn, f, entry.board.stm, results);
+    ToFeatures(board, f);
+    NNPredict(nn, f, board->stm, results);
 
-    e += Error(Sigmoid(results->output), &entry);
+    e += Error(Sigmoid(results->output), board);
   }
 
   return e / data->n;
@@ -125,8 +125,7 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
   for (int n = 0; n < BATCH_SIZE; n++) {
     const int t = omp_get_thread_num();
 
-    DataEntry entry = data->entries[n + batch * BATCH_SIZE];
-    Board board = entry.board;
+    Board board = data->entries[n + batch * BATCH_SIZE];
 
     NNAccumulators activations[1];
     Features f[1];
@@ -137,7 +136,7 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     float out = Sigmoid(activations->output);
 
     // LOSS CALCULATIONS ------------------------------------------------------------------------
-    float outputLoss = SigmoidPrime(out) * ErrorGradient(out, &entry);
+    float outputLoss = SigmoidPrime(out) * ErrorGradient(out, &board);
 
     float h2losses[N_HIDDEN_2];
     for (int i = 0; i < N_HIDDEN_2; i++)
