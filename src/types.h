@@ -7,6 +7,7 @@
 #define N_INPUT 768
 #define N_HIDDEN 128
 #define N_HIDDEN_2 32
+#define N_HIDDEN_3 32
 #define N_OUTPUT 1
 
 #define THREADS 16
@@ -19,8 +20,8 @@
 
 #define LAMBDA (1.0 / 1048576.0)
 
-#define MAX_POSITIONS 1750000000
-#define VALIDATION_POSITIONS 10000000
+#define MAX_POSITIONS 17500000
+#define VALIDATION_POSITIONS 100000
 
 #define CRELU_MAX 256
 
@@ -65,7 +66,10 @@ typedef struct {
 
 typedef struct {
   float outputBias;
-  float outputWeights[N_HIDDEN_2] __attribute__((aligned(64)));
+  float outputWeights[N_HIDDEN_3] __attribute__((aligned(64)));
+
+  float h3Biases[N_HIDDEN_3] __attribute__((aligned(64)));
+  float h3Weights[N_HIDDEN_2 * N_HIDDEN_3] __attribute__((aligned(64)));
 
   float h2Biases[N_HIDDEN_2] __attribute__((aligned(64)));
   float h2Weights[2 * N_HIDDEN * N_HIDDEN_2] __attribute__((aligned(64)));
@@ -76,6 +80,7 @@ typedef struct {
 
 typedef struct {
   float output;
+  float acc3[N_HIDDEN_3] __attribute__((aligned(64)));
   float acc2[N_HIDDEN_2] __attribute__((aligned(64)));
   float acc1[2][N_HIDDEN] __attribute__((aligned(64)));
 } NNAccumulators;
@@ -86,7 +91,10 @@ typedef struct {
 
 typedef struct {
   Gradient outputBias;
-  Gradient outputWeights[N_HIDDEN_2];
+  Gradient outputWeights[N_HIDDEN_3];
+
+  Gradient h3Biases[N_HIDDEN_3];
+  Gradient h3Weights[N_HIDDEN_2 * N_HIDDEN_3];
 
   Gradient h2Biases[N_HIDDEN_2];
   Gradient h2Weights[2 * N_HIDDEN * N_HIDDEN_2];
@@ -97,7 +105,10 @@ typedef struct {
 
 typedef struct {
   float outputBias;
-  float outputWeights[N_HIDDEN_2];
+  float outputWeights[N_HIDDEN_3];
+
+  float h3Biases[N_HIDDEN_3];
+  float h3Weights[N_HIDDEN_2 * N_HIDDEN_3];
 
   float h2Biases[N_HIDDEN_2];
   float h2Weights[2 * N_HIDDEN * N_HIDDEN_2];

@@ -8,26 +8,26 @@
 #include "types.h"
 #include "util.h"
 
-INLINE void ValidateGradient(double calculatedGradient, float* toValidate, NN* nn, DataEntry* entry) {
+INLINE void ValidateGradient(double calculatedGradient, float* toValidate, NN* nn, Board* entry) {
   const double H = 0.001;
 
   NNAccumulators activations[1];
 
   Features features[1];
-  ToFeatures(&entry->board, features);
+  ToFeatures(entry, features);
 
   float temp = *toValidate;
 
   // Raise value
   *toValidate += H;
-  NNPredict(nn, features, entry->board.stm, activations);
+  NNPredict(nn, features, entry->stm, activations);
   double raisedSigmoidResult = Sigmoid(activations->output);
   double raisedError = Error(raisedSigmoidResult, entry);
   *toValidate = temp;
 
   // Lower value
   *toValidate -= H;
-  NNPredict(nn, features, entry->board.stm, activations);
+  NNPredict(nn, features, entry->stm, activations);
   double loweredSigmoidResult = Sigmoid(activations->output);
   double loweredError = Error(loweredSigmoidResult, entry);
   *toValidate = temp;
@@ -37,9 +37,11 @@ INLINE void ValidateGradient(double calculatedGradient, float* toValidate, NN* n
   double diff = fabs((calculatedGradient - expectedGradient) / calculatedGradient);
 
   if (diff > 0.05)
-    printf("Failed! Calculated: %+0.10f, Expected: %+0.10f, Diff: %+0.10f\n", calculatedGradient, expectedGradient, diff);
+    printf("Failed! Calculated: %+0.10f, Expected: %+0.10f, Diff: %+0.10f\n", calculatedGradient, expectedGradient,
+           diff);
   else
-    printf("Correct! Calculated: %+0.10f, Expected: %+0.10f, Diff: %+0.10f\n", calculatedGradient, expectedGradient, diff);
+    printf("Correct! Calculated: %+0.10f, Expected: %+0.10f, Diff: %+0.10f\n", calculatedGradient, expectedGradient,
+           diff);
 }
 
 INLINE void UpdateAndApplyGradient(float* v, Gradient* grad) {
@@ -73,7 +75,15 @@ INLINE void ApplyGradients(NN* nn, NNGradients* g) {
     UpdateAndApplyGradient(&nn->h2Biases[i], &g->h2Biases[i]);
 
 #pragma omp parallel for schedule(auto) num_threads(THREADS)
-  for (int i = 0; i < N_HIDDEN_2; i++)
+  for (int i = 0; i < N_HIDDEN_2 * N_HIDDEN_3; i++)
+    UpdateAndApplyGradient(&nn->h3Weights[i], &g->h3Weights[i]);
+
+#pragma omp parallel for schedule(auto) num_threads(THREADS)
+  for (int i = 0; i < N_HIDDEN_3; i++)
+    UpdateAndApplyGradient(&nn->h3Biases[i], &g->h3Biases[i]);
+
+#pragma omp parallel for schedule(auto) num_threads(THREADS)
+  for (int i = 0; i < N_HIDDEN_3; i++)
     UpdateAndApplyGradient(&nn->outputWeights[i], &g->outputWeights[i]);
 
   UpdateAndApplyGradient(&nn->outputBias, &g->outputBias);
@@ -85,6 +95,9 @@ INLINE void ClearGradients(NNGradients* gradients) {
 
   memset(gradients->h2Weights, 0, sizeof(gradients->h2Weights));
   memset(gradients->h2Biases, 0, sizeof(gradients->h2Biases));
+
+  memset(gradients->h3Weights, 0, sizeof(gradients->h3Weights));
+  memset(gradients->h3Biases, 0, sizeof(gradients->h3Biases));
 
   memset(gradients->outputWeights, 0, sizeof(gradients->outputWeights));
   gradients->outputBias = (Gradient){.g = 0.0f, .M = 0.0f, .V = 0.0f};

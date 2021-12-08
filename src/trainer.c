@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
     }
 
     char buffer[64];
-    sprintf(buffer, "../nets/berserk-ks.e%d.2x%d.x%d.nn", epoch, N_HIDDEN, N_HIDDEN_2);
+    sprintf(buffer, "../nets/berserk-ks.e%d.2x%d.x%d.x%d.nn", epoch, N_HIDDEN, N_HIDDEN_2, N_HIDDEN_3);
     SaveNN(nn, buffer);
 
     printf("Calculating Validation Error...\r");
@@ -138,9 +138,14 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     // LOSS CALCULATIONS ------------------------------------------------------------------------
     float outputLoss = SigmoidPrime(out) * ErrorGradient(out, &board);
 
-    float h2losses[N_HIDDEN_2];
+    float h3losses[N_HIDDEN_3];
+    for (int i = 0; i < N_HIDDEN_3; i++)
+      h3losses[i] = outputLoss * nn->outputWeights[i] * ReLUPrime(activations->acc3[i]);
+
+    float h2losses[N_HIDDEN_2] = {0};
     for (int i = 0; i < N_HIDDEN_2; i++)
-      h2losses[i] = outputLoss * nn->outputWeights[i] * ReLUPrime(activations->acc2[i]);
+      for (int j = 0; j < N_HIDDEN_3; j++)
+        h2losses[i] += h3losses[j] * nn->h3Weights[j * N_HIDDEN_2 + i] * ReLUPrime(activations->acc2[i]);
 
     float hiddenLosses[2][N_HIDDEN] = {0};
     for (int i = 0; i < N_HIDDEN; i++) {
@@ -156,10 +161,19 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     // OUTPUT LAYER GRADIENTS -------------------------------------------------------------------
     local[t].outputBias += outputLoss;
 
-    for (int i = 0; i < N_HIDDEN_2; i++) {
-      local[t].outputWeights[i] += activations->acc2[i] * outputLoss;
+    for (int i = 0; i < N_HIDDEN_3; i++) {
+      local[t].outputWeights[i] += activations->acc3[i] * outputLoss;
     }
     // ------------------------------------------------------------------------------------------
+
+    // THIRD LAYER GRADIENTS ---------------------------------------------------------------------
+    for (int i = 0; i < N_HIDDEN_3; i++) {
+      local[t].h3Biases[i] += h3losses[i];
+
+      for (int j = 0; j < N_HIDDEN_2; j++)
+        local[t].h3Weights[i * N_HIDDEN_2 + j] += activations->acc2[j] * h3losses[i];
+    }
+    // -------------------------------------------------------------------------------------------
 
     // SECOND LAYER GRADIENTS -------------------------------------------------------------------
     for (int i = 0; i < N_HIDDEN_2; i++) {
@@ -214,7 +228,17 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
       g->h2Biases[i].g += local[t].h2Biases[i];
 
 #pragma omp parallel for schedule(auto) num_threads(2)
-  for (int i = 0; i < N_HIDDEN_2; i++)
+  for (int i = 0; i < N_HIDDEN_2 * N_HIDDEN_3; i++)
+    for (int t = 0; t < THREADS; t++)
+      g->h3Weights[i].g += local[t].h3Weights[i];
+
+#pragma omp parallel for schedule(auto) num_threads(2)
+  for (int i = 0; i < N_HIDDEN_3; i++)
+    for (int t = 0; t < THREADS; t++)
+      g->h3Biases[i].g += local[t].h3Biases[i];
+
+#pragma omp parallel for schedule(auto) num_threads(2)
+  for (int i = 0; i < N_HIDDEN_3; i++)
     for (int t = 0; t < THREADS; t++)
       g->outputWeights[i].g += local[t].outputWeights[i];
 
