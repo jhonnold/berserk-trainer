@@ -57,3 +57,5 @@ dist
 
 *.log
 *.nn
+
+log
