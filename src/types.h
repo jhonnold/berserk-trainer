@@ -16,14 +16,14 @@
 #define BATCH_SIZE 16384
 
 #define ALPHA 0.01f
-#define BETA1 0.9f
+#define BETA1 0.95f
 #define BETA2 0.999f
 #define EPSILON 1e-8f
 
 #define LAMBDA (1.0 / 1048576.0)
 
-#define MAX_POSITIONS 1500000000
-#define VALIDATION_POSITIONS 5000000
+#define MAX_POSITIONS 1750000000
+#define VALIDATION_POSITIONS 10000000
 
 #define CRELU_MAX 256
 
@@ -50,7 +50,7 @@ typedef uint8_t Piece;
 typedef uint16_t Feature;
 
 typedef struct {
-  Color stm;
+  Color stm, wdl;
   Square kings[2];
   uint64_t occupancies;
   uint8_t pieces[16];
@@ -63,14 +63,8 @@ typedef struct {
 } Features;
 
 typedef struct {
-  int8_t wdl;
-  float eval;
-  Board board;
-} DataEntry;
-
-typedef struct {
   int n;
-  DataEntry* entries;
+  Board* entries;
 } DataSet;
 
 typedef struct {
