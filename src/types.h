@@ -5,9 +5,9 @@
 #include <stdbool.h>
 
 #define N_INPUT 768
-#define N_HIDDEN 128
-#define N_HIDDEN_2 32
-#define N_HIDDEN_3 32
+#define N_HIDDEN 160
+#define N_HIDDEN_2 16
+#define N_HIDDEN_3 16
 #define N_OUTPUT 1
 
 #define THREADS 16
@@ -20,8 +20,8 @@
 
 #define LAMBDA (1.0 / 1048576.0)
 
-#define MAX_POSITIONS 17500000
-#define VALIDATION_POSITIONS 100000
+#define MAX_POSITIONS 1750000000
+#define VALIDATION_POSITIONS 10000000
 
 #define CRELU_MAX 256
 
