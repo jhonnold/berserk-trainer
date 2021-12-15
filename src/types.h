@@ -11,7 +11,7 @@
 #define THREADS 16
 #define BATCH_SIZE 16384
 
-#define ALPHA 0.001f
+#define ALPHA 0.01f
 #define BETA1 0.95f
 #define BETA2 0.999f
 #define EPSILON 1e-8f
