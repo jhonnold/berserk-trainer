@@ -43,10 +43,10 @@ void NNPredict(NN* nn, Features* f, Color stm, NNAccumulators* results) {
   ReLU(results->pAcc1[BLACK], N_P_HIDDEN);
 
   float mainNetOutput = DotProduct(results->acc1[stm], nn->outputWeights, N_HIDDEN) +
-                        DotProduct(results->acc1[stm ^ 1], nn->outputWeights + N_HIDDEN, N_HIDDEN) + //
+                        DotProduct(results->acc1[stm ^ 1], nn->outputWeights + N_HIDDEN, N_HIDDEN) +  //
                         nn->outputBias;
   float pawnNetOuput = DotProduct(results->pAcc1[stm], nn->pawnOutputWeights, N_P_HIDDEN) +
-                       DotProduct(results->pAcc1[stm ^ 1], nn->pawnOutputWeights + N_P_HIDDEN, N_P_HIDDEN) + //
+                       DotProduct(results->pAcc1[stm ^ 1], nn->pawnOutputWeights + N_P_HIDDEN, N_P_HIDDEN) +  //
                        nn->pawnOutputBias;
 
   results->output = mainNetOutput + pawnNetOuput;
@@ -100,14 +100,11 @@ NN* LoadRandomNN() {
 
   nn->outputBias = 0;
 
-  for (int i = 0; i < N_P_INPUT * N_P_HIDDEN; i++)
-    nn->pawnInputWeights[i] = RandomGaussian(0, sqrt(1.0 / 16));
+  for (int i = 0; i < N_P_INPUT * N_P_HIDDEN; i++) nn->pawnInputWeights[i] = RandomGaussian(0, sqrt(1.0 / 16));
 
-  for (int i = 0; i < N_P_HIDDEN; i++)
-    nn->pawnInputBiases[i] = 0;
+  for (int i = 0; i < N_P_HIDDEN; i++) nn->pawnInputBiases[i] = 0;
 
-  for (int i = 0; i < N_P_HIDDEN * 2; i++)
-    nn->pawnOutputWeights[i] = RandomGaussian(0, sqrt(1.0 / N_P_HIDDEN));
+  for (int i = 0; i < N_P_HIDDEN * 2; i++) nn->pawnOutputWeights[i] = RandomGaussian(0, sqrt(1.0 / N_P_HIDDEN));
 
   nn->pawnOutputBias = 0;
 

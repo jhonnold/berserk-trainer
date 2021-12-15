@@ -182,7 +182,8 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
         float xstmLasso = LAMBDA * (activations->acc1[board.stm ^ 1][j] > 0);
 
         local[t].inputWeights[f->features[board.stm][i] * N_HIDDEN + j] += hiddenLosses[board.stm][j] + stmLasso;
-        local[t].inputWeights[f->features[board.stm ^ 1][i] * N_HIDDEN + j] += hiddenLosses[board.stm ^ 1][j] + xstmLasso;
+        local[t].inputWeights[f->features[board.stm ^ 1][i] * N_HIDDEN + j] +=
+            hiddenLosses[board.stm ^ 1][j] + xstmLasso;
       }
     }
 
@@ -212,24 +213,19 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
   for (int i = 0; i < N_HIDDEN * 2; i++)
     for (int t = 0; t < THREADS; t++) g->outputWeights[i].g += local[t].outputWeights[i];
 
-  for (int t = 0; t < THREADS; t++)
-    g->outputBias.g += local[t].outputBias;
+  for (int t = 0; t < THREADS; t++) g->outputBias.g += local[t].outputBias;
 
 #pragma omp parallel for schedule(auto) num_threads(4)
   for (int i = 0; i < N_P_INPUT * N_P_HIDDEN; i++)
-    for (int t = 0; t < THREADS; t++)
-      g->pawnInputWeights[i].g += local[t].pawnInputWeights[i];
+    for (int t = 0; t < THREADS; t++) g->pawnInputWeights[i].g += local[t].pawnInputWeights[i];
 
 #pragma omp parallel for schedule(auto) num_threads(2)
   for (int i = 0; i < N_P_HIDDEN; i++)
-    for (int t = 0; t < THREADS; t++)
-      g->pawnInputBiases[i].g += local[t].pawnInputBiases[i];
+    for (int t = 0; t < THREADS; t++) g->pawnInputBiases[i].g += local[t].pawnInputBiases[i];
 
 #pragma omp parallel for schedule(auto) num_threads(2)
   for (int i = 0; i < N_P_HIDDEN * 2; i++)
-    for (int t = 0; t < THREADS; t++)
-      g->pawnOutputWeights[i].g += local[t].pawnOutputWeights[i];
+    for (int t = 0; t < THREADS; t++) g->pawnOutputWeights[i].g += local[t].pawnOutputWeights[i];
 
-  for (int t = 0; t < THREADS; t++)
-    g->pawnOutputBias.g += local[t].pawnOutputBias;
+  for (int t = 0; t < THREADS; t++) g->pawnOutputBias.g += local[t].pawnOutputBias;
 }
