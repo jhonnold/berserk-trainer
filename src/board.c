@@ -1,10 +1,11 @@
+#include "board.h"
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "bits.h"
-#include "board.h"
 
 void ToFeatures(Board* board, Features* f) {
   f->n = 0;
@@ -28,8 +29,7 @@ void ParseFen(char* fen, Board* board) {
 
   // Make sure the board is empty
   board->occupancies = 0;
-  for (int i = 0; i < 16; i++)
-    board->pieces[i] = 0;
+  for (int i = 0; i < 16; i++) board->pieces[i] = 0;
 
   board->kings[WHITE] = INT8_MAX;
   board->kings[BLACK] = INT8_MAX;
