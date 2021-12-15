@@ -20,7 +20,7 @@
 #define BETA2 0.999f
 #define EPSILON 1e-8f
 
-#define LAMBDA (1.0 / 1048576.0)
+#define LAMBDA (1.0 / (1024 * 1024))
 
 #define MAX_POSITIONS 1750000000
 #define VALIDATION_POSITIONS 10000000
@@ -85,7 +85,7 @@ typedef struct {
   float output;
   float acc1[2][N_HIDDEN] __attribute__((aligned(64)));
   float pAcc1[2][N_P_HIDDEN] __attribute__((aligned(64)));
-} NNAccumulators;
+} __attribute__((aligned(64))) NNAccumulators;
 
 typedef struct {
   float g, M, V;

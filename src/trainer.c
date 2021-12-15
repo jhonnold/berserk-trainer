@@ -1,3 +1,5 @@
+#include "trainer.h"
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,7 +11,6 @@
 #include "gradients.h"
 #include "nn.h"
 #include "random.h"
-#include "trainer.h"
 #include "util.h"
 
 int main(int argc, char** argv) {
@@ -22,14 +23,14 @@ int main(int argc, char** argv) {
 
   while ((c = getopt(argc, argv, "d:n:")) != -1) {
     switch (c) {
-    case 'd':
-      strcpy(entriesPath, optarg);
-      break;
-    case 'n':
-      strcpy(nnPath, optarg);
-      break;
-    case '?':
-      return 1;
+      case 'd':
+        strcpy(entriesPath, optarg);
+        break;
+      case 'n':
+        strcpy(nnPath, optarg);
+        break;
+      case '?':
+        return 1;
     }
   }
 
@@ -64,14 +65,14 @@ int main(int argc, char** argv) {
 
   BatchGradients* local = malloc(sizeof(BatchGradients) * THREADS);
 
-  printf("Calculating Validation Error...\r");
+  printf("Calculating Validation Error...\n");
   float error = TotalError(validation, nn);
   printf("Starting Error: [%1.8f]\n", error);
 
   for (int epoch = 1; epoch <= 250; epoch++) {
     long epochStart = GetTimeMS();
 
-    printf("Shuffling...\r");
+    printf("Shuffling...\n");
     ShuffleData(data);
 
     int batches = data->n / BATCH_SIZE;
@@ -79,14 +80,14 @@ int main(int argc, char** argv) {
       Train(b, data, nn, gradients, local);
       ApplyGradients(nn, gradients);
 
-      printf("Batch: [#%d/%d]\r", b + 1, batches);
+      if ((b + 1) % 1000 == 0) printf("Batch: [#%d/%d]\n", b + 1, batches);
     }
 
     char buffer[64];
     sprintf(buffer, "../nets/berserk-ks+p.e%d.2x%d.2x%d.nn", epoch, N_HIDDEN, N_P_HIDDEN);
     SaveNN(nn, buffer);
 
-    printf("Calculating Validation Error...\r");
+    printf("Calculating Validation Error...\n");
     float newError = TotalError(validation, nn);
 
     long now = GetTimeMS();
@@ -118,8 +119,7 @@ float TotalError(DataSet* data, NN* nn) {
 
 void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* local) {
 #pragma omp parallel for schedule(auto) num_threads(THREADS)
-  for (int t = 0; t < THREADS; t++)
-    memset(&local[t], 0, sizeof(BatchGradients));
+  for (int t = 0; t < THREADS; t++) memset(&local[t], 0, sizeof(BatchGradients));
 
 #pragma omp parallel for schedule(auto) num_threads(THREADS)
   for (int n = 0; n < BATCH_SIZE; n++) {
@@ -202,18 +202,15 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
 
 #pragma omp parallel for schedule(auto) num_threads(4)
   for (int i = 0; i < N_INPUT * N_HIDDEN; i++)
-    for (int t = 0; t < THREADS; t++)
-      g->inputWeights[i].g += local[t].inputWeights[i];
+    for (int t = 0; t < THREADS; t++) g->inputWeights[i].g += local[t].inputWeights[i];
 
 #pragma omp parallel for schedule(auto) num_threads(2)
   for (int i = 0; i < N_HIDDEN; i++)
-    for (int t = 0; t < THREADS; t++)
-      g->inputBiases[i].g += local[t].inputBiases[i];
+    for (int t = 0; t < THREADS; t++) g->inputBiases[i].g += local[t].inputBiases[i];
 
 #pragma omp parallel for schedule(auto) num_threads(2)
   for (int i = 0; i < N_HIDDEN * 2; i++)
-    for (int t = 0; t < THREADS; t++)
-      g->outputWeights[i].g += local[t].outputWeights[i];
+    for (int t = 0; t < THREADS; t++) g->outputWeights[i].g += local[t].outputWeights[i];
 
   for (int t = 0; t < THREADS; t++)
     g->outputBias.g += local[t].outputBias;

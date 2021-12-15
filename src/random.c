@@ -1,9 +1,9 @@
+#include "random.h"
+
 #include <inttypes.h>
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
-
-#include "random.h"
 
 // I dunno anything about random number generators, and had a bad one for a while
 // Thanks to Martin Sedlák (author of Cheng) this one is really cool and works :)
@@ -22,24 +22,23 @@ inline uint64_t RandomUInt64() {
 void SeedRandom() {
   keys[0] = keys[1] = time(NULL);
 
-  for (int i = 0; i < 64; i++)
-    RandomUInt64();
+  for (int i = 0; i < 64; i++) RandomUInt64();
 }
 
 // https://phoxis.org/2013/05/04/generating-random-numbers-from-normal-distribution-in-c/
-double RandomGaussian(double mu, double sigma) {
-  double U1, U2, W, mult;
-  static double X1, X2;
+float RandomGaussian(float mu, float sigma) {
+  float U1, U2, W, mult;
+  static float X1, X2;
   static int call = 0;
 
   if (call == 1) {
     call = !call;
-    return (mu + sigma * (double)X2);
+    return (mu + sigma * (float)X2);
   }
 
   do {
-    U1 = -1 + ((double)rand() / RAND_MAX) * 2;
-    U2 = -1 + ((double)rand() / RAND_MAX) * 2;
+    U1 = -1 + ((float)rand() / RAND_MAX) * 2;
+    U2 = -1 + ((float)rand() / RAND_MAX) * 2;
     W = pow(U1, 2) + pow(U2, 2);
   } while (W >= 1 || W == 0);
 
@@ -49,5 +48,5 @@ double RandomGaussian(double mu, double sigma) {
 
   call = !call;
 
-  return (mu + sigma * (double)X1);
+  return (mu + sigma * (float)X1);
 }

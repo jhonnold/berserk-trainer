@@ -1,3 +1,5 @@
+#include "nn.h"
+
 #include <immintrin.h>
 #include <math.h>
 #include <stdio.h>
@@ -7,8 +9,8 @@
 
 #include "bits.h"
 #include "board.h"
-#include "nn.h"
 #include "random.h"
+#include "util.h"
 
 const int NETWORK_MAGIC = 'B' | 'R' << 8 | 'K' << 16 | 'R' << 24;
 
@@ -69,7 +71,7 @@ NN* LoadNN(char* path) {
   fread(&hash, sizeof(uint64_t), 1, fp);
   printf("Reading network with hash %llx\n", hash);
 
-  NN* nn = malloc(sizeof(NN));
+  NN* nn = AlignedMalloc(sizeof(NN));
 
   fread(nn->inputWeights, sizeof(float), N_INPUT * N_HIDDEN, fp);
   fread(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
@@ -88,16 +90,13 @@ NN* LoadNN(char* path) {
 
 NN* LoadRandomNN() {
   srand(time(NULL));
-  NN* nn = malloc(sizeof(NN));
+  NN* nn = AlignedMalloc(sizeof(NN));
 
-  for (int i = 0; i < N_INPUT * N_HIDDEN; i++)
-    nn->inputWeights[i] = RandomGaussian(0, sqrt(1.0 / 32));
+  for (int i = 0; i < N_INPUT * N_HIDDEN; i++) nn->inputWeights[i] = RandomGaussian(0, sqrt(1.0 / 32));
 
-  for (int i = 0; i < N_HIDDEN; i++)
-    nn->inputBiases[i] = 0;
+  for (int i = 0; i < N_HIDDEN; i++) nn->inputBiases[i] = 0;
 
-  for (int i = 0; i < N_HIDDEN * 2; i++)
-    nn->outputWeights[i] = RandomGaussian(0, sqrt(1.0 / N_HIDDEN));
+  for (int i = 0; i < N_HIDDEN * 2; i++) nn->outputWeights[i] = RandomGaussian(0, sqrt(1.0 / N_HIDDEN));
 
   nn->outputBias = 0;
 
