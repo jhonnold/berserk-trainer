@@ -7,14 +7,13 @@
 #include "util.h"
 
 void UpdateAndApplyGradient(float* v, Gradient* grad) {
+  if (!grad->g) return;
+
   grad->M = BETA1 * grad->M + (1.0 - BETA1) * grad->g;
   grad->V = BETA2 * grad->V + (1.0 - BETA2) * grad->g * grad->g;
   float delta = ALPHA * grad->M / (sqrtf(grad->V) + EPSILON);
 
-  if (isnan(delta))
-    grad->M = grad->V = 0.0;
-  else
-    *v -= delta;
+  *v -= delta;
 
   grad->g = 0;
 }
