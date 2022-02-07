@@ -1,5 +1,7 @@
 #include "types.h"
 
+float ALPHA = 0.01f;
+
 const float SS = 3.68415f / 512;
 
 const Piece charToPiece[] = {['P'] = WHITE_PAWN,   ['N'] = WHITE_KNIGHT, ['B'] = WHITE_BISHOP, ['R'] = WHITE_ROOK,

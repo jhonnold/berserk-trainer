@@ -4,14 +4,14 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define N_INPUT 768
+#define N_INPUT 1536
 #define N_HIDDEN 512
 #define N_OUTPUT 1
 
 #define THREADS 16
 #define BATCH_SIZE 16384
 
-#define ALPHA 0.01f
+extern float ALPHA;
 #define BETA1 0.95f
 #define BETA2 0.999f
 #define EPSILON 1e-8f

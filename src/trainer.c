@@ -95,6 +95,11 @@ int main(int argc, char** argv) {
            newError, error - newError, ALPHA, 1000.0 * data->n / (now - epochStart), (now - epochStart) / 1000);
 
     error = newError;
+
+    if (epoch == 30) {
+      ClearGradients(gradients);
+      ALPHA = 0.001f;
+    }
   }
 }
 
