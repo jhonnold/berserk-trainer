@@ -5,7 +5,10 @@
 
 #include "util.h"
 
+#define DARK_SQS 0x55AA55AA55AA55AAULL
+
 #define bit(sq) (1ULL << (sq))
+#define getBit(bb, sq) (!!((bb)&bit(sq)))
 #define setBit(bb, sq) ((bb) |= bit(sq))
 #define lsb(bb) (__builtin_ctzll(bb))
 

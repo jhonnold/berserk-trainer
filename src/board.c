@@ -27,6 +27,11 @@ void ParseFen(char* fen, Board* board) {
   char* _fen = fen;
   int n = 0;
 
+  int wbc = 0;
+  int bbc = 0;
+  int wbsq = -1;
+  int bbsq = -1;
+
   // Make sure the board is empty
   board->occupancies = 0;
   for (int i = 0; i < 16; i++) board->pieces[i] = 0;
@@ -39,7 +44,11 @@ void ParseFen(char* fen, Board* board) {
     if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
       Piece pc = charToPiece[(int)*fen];
 
-      if (c == 'K')
+      if (c == 'B')
+        wbc++, wbsq = sq;
+      else if (c == 'b')
+        bbc++, bbsq = sq;
+      else if (c == 'K')
         board->kings[WHITE] = sq;
       else if (c == 'k')
         board->kings[BLACK] = sq;
@@ -59,6 +68,8 @@ void ParseFen(char* fen, Board* board) {
 
     fen++;
   }
+
+  board->ocb = (wbc == 1 && bbc == 1 && getBit(DARK_SQS, wbsq) != getBit(DARK_SQS, bbsq));
 
   if (board->kings[WHITE] == INT8_MAX || board->kings[BLACK] == INT8_MAX) {
     printf("Unable to locate kings in FEN: %s!\n", _fen);

@@ -26,9 +26,10 @@ void ApplyGradients(NN* nn, NNGradients* g) {
   for (int i = 0; i < N_HIDDEN; i++) UpdateAndApplyGradient(&nn->inputBiases[i], &g->inputBiases[i]);
 
 #pragma omp parallel for schedule(auto) num_threads(THREADS)
-  for (int i = 0; i < N_HIDDEN * 2; i++) UpdateAndApplyGradient(&nn->outputWeights[i], &g->outputWeights[i]);
+  for (int i = 0; i < N_HIDDEN * 2; i++)
+    for (int b = 0; b < N_BUCKETS; b++) UpdateAndApplyGradient(&nn->outputWeights[b][i], &g->outputWeights[b][i]);
 
-  UpdateAndApplyGradient(&nn->outputBias, &g->outputBias);
+  for (int b = 0; b < N_BUCKETS; b++) UpdateAndApplyGradient(&nn->outputBias[b], &g->outputBias[b]);
 }
 
 void ClearGradients(NNGradients* gradients) {

@@ -6,7 +6,7 @@
 #include "types.h"
 #include "util.h"
 
-void NNPredict(NN* nn, Features* f, Color stm, NNAccumulators* results);
+void NNPredict(NN* nn, Features* f, Color stm, int bucket, NNAccumulators* results);
 
 NN* LoadNN(char* path);
 NN* LoadRandomNN();

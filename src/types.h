@@ -8,6 +8,8 @@
 #define N_HIDDEN 512
 #define N_OUTPUT 1
 
+#define N_BUCKETS 2
+
 #define THREADS 16
 #define BATCH_SIZE 16384
 
@@ -46,7 +48,7 @@ typedef uint8_t Piece;
 typedef uint16_t Feature;
 
 typedef struct {
-  Color stm, wdl;
+  Color stm, wdl, ocb;
   Square kings[2];
   uint64_t occupancies;
   uint8_t pieces[16];
@@ -63,8 +65,8 @@ typedef struct {
 } DataSet;
 
 typedef struct {
-  float outputBias;
-  float outputWeights[2 * N_HIDDEN] __attribute__((aligned(64)));
+  float outputBias[N_BUCKETS];
+  float outputWeights[N_BUCKETS][2 * N_HIDDEN] __attribute__((aligned(64)));
 
   float inputBiases[N_HIDDEN] __attribute__((aligned(64)));
   float inputWeights[N_INPUT * N_HIDDEN] __attribute__((aligned(64)));
@@ -80,16 +82,16 @@ typedef struct {
 } Gradient;
 
 typedef struct {
-  Gradient outputBias;
-  Gradient outputWeights[2 * N_HIDDEN];
+  Gradient outputBias[N_BUCKETS];
+  Gradient outputWeights[N_BUCKETS][2 * N_HIDDEN];
 
   Gradient inputBiases[N_HIDDEN];
   Gradient inputWeights[N_INPUT * N_HIDDEN];
 } NNGradients;
 
 typedef struct {
-  float outputBias;
-  float outputWeights[2 * N_HIDDEN];
+  float outputBias[N_BUCKETS];
+  float outputWeights[N_BUCKETS][2 * N_HIDDEN];
 
   float inputBiases[N_HIDDEN];
   float inputWeights[N_INPUT * N_HIDDEN];
