@@ -8,7 +8,7 @@
 #include "random.h"
 #include "util.h"
 
-void LoadEntries(char* path, DataSet* data, int n, int offset) {
+void LoadEntries(char* path, DataSet* data, uint32_t n, uint32_t offset) {
   FILE* fp = fopen(path, "r");
   if (fp == NULL) {
     printf("Cannot open file: %s!\n", path);
@@ -16,7 +16,7 @@ void LoadEntries(char* path, DataSet* data, int n, int offset) {
   }
 
   char in[128];
-  int p = 0;
+  uint32_t p = 0;
 
   while (offset-- > 0) fgets(in, 128, fp);
 
@@ -52,8 +52,8 @@ void LoadDataEntry(char* buffer, Board* result) {
 void ShuffleData(DataSet* data) {
   Board temp;
 
-  for (int i = 0; i < data->n; i++) {
-    int j = RandomUInt64() % data->n;
+  for (uint32_t i = 0; i < data->n; i++) {
+    uint32_t j = RandomUInt64() % data->n;
     temp = data->entries[i];
     data->entries[i] = data->entries[j];
     data->entries[j] = temp;
