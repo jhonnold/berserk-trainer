@@ -18,8 +18,8 @@ extern float ALPHA;
 
 #define LAMBDA (1.0 / (1024 * 1024))
 
-#define MAX_POSITIONS 1750000000
-#define VALIDATION_POSITIONS 10000000
+#define MAX_POSITIONS (2047 * 1024 * 1024)
+#define VALIDATION_POSITIONS (16 * 1024 * 1024)
 
 #define CRELU_MAX 256
 
@@ -50,7 +50,7 @@ typedef struct {
   Square kings[2];
   uint64_t occupancies;
   uint8_t pieces[16];
-} Board;
+} __attribute__((packed, aligned(4))) Board;
 
 typedef struct {
   int8_t n;
@@ -58,7 +58,7 @@ typedef struct {
 } Features;
 
 typedef struct {
-  int n;
+  uint32_t n;
   Board* entries;
 } DataSet;
 

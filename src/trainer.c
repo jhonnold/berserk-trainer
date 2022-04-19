@@ -69,14 +69,14 @@ int main(int argc, char** argv) {
   float error = TotalError(validation, nn);
   printf("Starting Error: [%1.8f]\n", error);
 
-  for (int epoch = 1; epoch <= 250; epoch++) {
+  for (int epoch = 1; epoch <= 22; epoch++) {
     long epochStart = GetTimeMS();
 
     printf("Shuffling...\n");
     ShuffleData(data);
 
-    int batches = data->n / BATCH_SIZE;
-    for (int b = 0; b < batches; b++) {
+    uint32_t batches = data->n / BATCH_SIZE;
+    for (uint32_t b = 0; b < batches; b++) {
       Train(b, data, nn, gradients, local);
       ApplyGradients(nn, gradients);
 
@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
     }
 
     char buffer[64];
-    sprintf(buffer, "../nets/berserk-ks.e%d.2x%d.nn", epoch, N_HIDDEN);
+    sprintf(buffer, "../nets/berserk-kq.e%d.2x%d.nn", epoch, N_HIDDEN);
     SaveNN(nn, buffer);
 
     printf("Calculating Validation Error...\n");
@@ -96,10 +96,12 @@ int main(int argc, char** argv) {
 
     error = newError;
 
-    if (epoch == 30) {
-      ClearGradients(gradients);
+    // LR DROP
+    if (epoch == 20)
       ALPHA = 0.001f;
-    }
+
+    if (epoch == 21)
+      ALPHA = 0.0001f;
   }
 }
 
@@ -107,7 +109,7 @@ float TotalError(DataSet* data, NN* nn) {
   float e = 0.0f;
 
 #pragma omp parallel for schedule(auto) num_threads(THREADS) reduction(+ : e)
-  for (int i = 0; i < data->n; i++) {
+  for (uint32_t i = 0; i < data->n; i++) {
     Board* board = &data->entries[i];
 
     NNAccumulators results[1];
