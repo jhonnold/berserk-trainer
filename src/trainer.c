@@ -1,5 +1,6 @@
 #include "trainer.h"
 
+#include <immintrin.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -77,10 +78,10 @@ int main(int argc, char** argv) {
 
     uint32_t batches = data->n / BATCH_SIZE;
     for (uint32_t b = 0; b < batches; b++) {
-      Train(b, data, nn, gradients, local);
-      ApplyGradients(nn, gradients);
+      Train(b, data, nn, local);
+      ApplyGradients(nn, gradients, local);
 
-      if ((b + 1) % 1000 == 0) printf("Batch: [#%d/%d]\n", b + 1, batches);
+      printf("Batch: [#%d/%d]\n", b + 1, batches);
     }
 
     char buffer[64];
@@ -97,16 +98,14 @@ int main(int argc, char** argv) {
     error = newError;
 
     // LR DROP
-    if (epoch == 20)
-      ALPHA = 0.001f;
+    if (epoch == 20) ALPHA = 0.001;
 
-    if (epoch == 21)
-      ALPHA = 0.0001f;
+    if (epoch == 21) ALPHA = 0.0001;
   }
 }
 
 float TotalError(DataSet* data, NN* nn) {
-  float e = 0.0f;
+  float e = 0.0;
 
 #pragma omp parallel for schedule(auto) num_threads(THREADS) reduction(+ : e)
   for (uint32_t i = 0; i < data->n; i++) {
@@ -124,8 +123,7 @@ float TotalError(DataSet* data, NN* nn) {
   return e / data->n;
 }
 
-void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* local) {
-#pragma omp parallel for schedule(auto) num_threads(THREADS)
+void Train(int batch, DataSet* data, NN* nn, BatchGradients* local) {
   for (int t = 0; t < THREADS; t++) memset(&local[t], 0, sizeof(BatchGradients));
 
 #pragma omp parallel for schedule(auto) num_threads(THREADS)
@@ -141,58 +139,72 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     NNPredict(nn, f, board.stm, activations);
 
     float out = Sigmoid(activations->output);
+    float delta = SigmoidPrime(out) * ErrorGradient(out, &board);
 
     // LOSS CALCULATIONS ------------------------------------------------------------------------
-    float outputLoss = SigmoidPrime(out) * ErrorGradient(out, &board);
+    const size_t WIDTH = sizeof(__m256) / sizeof(float);
+    const size_t CHUNKS = N_HIDDEN / WIDTH;
 
-    float hiddenLosses[2][N_HIDDEN];
-    for (int i = 0; i < N_HIDDEN; i++) {
-      hiddenLosses[board.stm][i] = outputLoss * nn->outputWeights[i] * ReLUPrime(activations->acc1[board.stm][i]);
-      hiddenLosses[board.stm ^ 1][i] =
-          outputLoss * nn->outputWeights[i + N_HIDDEN] * ReLUPrime(activations->acc1[board.stm ^ 1][i]);
+    const __m256 zero = _mm256_setzero_ps();
+    const __m256 one = _mm256_set1_ps(1.0);
+    const __m256 lambda = _mm256_set1_ps(LAMBDA);
+
+    __m256 outputLoss = _mm256_set1_ps(delta);
+
+    __m256 hiddenLosses[2 * CHUNKS] ALIGN64;
+
+    __m256* acc = (__m256*)activations->acc1;
+    __m256* nnOutputWeights = (__m256*)nn->outputWeights;
+
+    for (size_t i = 0; i < 2 * CHUNKS; i++) {
+      __m256 reluPrime = _mm256_blendv_ps(zero, one, _mm256_cmp_ps(acc[i], zero, 30));
+
+      hiddenLosses[i] = _mm256_mul_ps(outputLoss, _mm256_mul_ps(nnOutputWeights[i], reluPrime));
     }
     // ------------------------------------------------------------------------------------------
 
     // OUTPUT LAYER GRADIENTS -------------------------------------------------------------------
-    local[t].outputBias += outputLoss;
-    for (int i = 0; i < N_HIDDEN; i++) {
-      local[t].outputWeights[i] += activations->acc1[board.stm][i] * outputLoss;
-      local[t].outputWeights[i + N_HIDDEN] += activations->acc1[board.stm ^ 1][i] * outputLoss;
-    }
+    local[t].outputBias += delta;
+
+    __m256* outputWeights = (__m256*)local[t].outputWeights;
+    for (size_t i = 0; i < 2 * CHUNKS; i++)
+      outputWeights[i] = _mm256_add_ps(outputWeights[i], _mm256_mul_ps(acc[i], outputLoss));
     // ------------------------------------------------------------------------------------------
 
     // INPUT LAYER GRADIENTS --------------------------------------------------------------------
-    for (int i = 0; i < N_HIDDEN; i++) {
-      float stmLasso = LAMBDA * (activations->acc1[board.stm][i] > 0);
-      float xstmLasso = LAMBDA * (activations->acc1[board.stm ^ 1][i] > 0);
+    __m256* stmActivations = &acc[0];
+    __m256* xstmActivations = &acc[CHUNKS];
 
-      local[t].inputBiases[i] += hiddenLosses[board.stm][i] + hiddenLosses[board.stm ^ 1][i] + stmLasso + xstmLasso;
+    __m256* stmLosses = &hiddenLosses[0];
+    __m256* xstmLosses = &hiddenLosses[CHUNKS];
+
+    __m256* biasGradients = (__m256*)local[t].inputBiases;
+    __m256* weightGradients = (__m256*)local[t].inputWeights;
+
+    for (size_t i = 0; i < CHUNKS; i++) {
+      __m256 stmLasso = _mm256_blendv_ps(zero, lambda, _mm256_cmp_ps(stmActivations[i], zero, 30));
+      __m256 xstmLasso = _mm256_blendv_ps(zero, lambda, _mm256_cmp_ps(xstmActivations[i], zero, 30));
+
+      __m256 lassos = _mm256_add_ps(stmLasso, xstmLasso);
+      __m256 losses = _mm256_add_ps(stmLosses[i], xstmLosses[i]);
+
+      biasGradients[i] = _mm256_add_ps(biasGradients[i], _mm256_add_ps(lassos, losses));
     }
+
+    float* stmAcc = activations->acc1;
+    float* xstmAcc = &activations->acc1[N_HIDDEN];
+    float* stmLosses2 = (float*) hiddenLosses;
+    float* xstmLosses2 = (float*) &hiddenLosses[CHUNKS];
 
     for (int i = 0; i < f->n; i++) {
       for (int j = 0; j < N_HIDDEN; j++) {
-        float stmLasso = LAMBDA * (activations->acc1[board.stm][j] > 0);
-        float xstmLasso = LAMBDA * (activations->acc1[board.stm ^ 1][j] > 0);
+        float stmLasso = LAMBDA * (stmAcc[j] > 0);
+        float xstmLasso = LAMBDA * (xstmAcc[j] > 0);
 
-        local[t].inputWeights[f->features[board.stm][i] * N_HIDDEN + j] += hiddenLosses[board.stm][j] + stmLasso;
-        local[t].inputWeights[f->features[board.stm ^ 1][i] * N_HIDDEN + j] +=
-            hiddenLosses[board.stm ^ 1][j] + xstmLasso;
+        local[t].inputWeights[f->features[i][board.stm] * N_HIDDEN + j] += stmLosses2[j] + stmLasso;
+        local[t].inputWeights[f->features[i][board.stm ^ 1] * N_HIDDEN + j] += xstmLosses2[j] + xstmLasso;
       }
     }
     // ------------------------------------------------------------------------------------------
   }
-
-#pragma omp parallel for schedule(auto) num_threads(4)
-  for (int i = 0; i < N_INPUT * N_HIDDEN; i++)
-    for (int t = 0; t < THREADS; t++) g->inputWeights[i].g += local[t].inputWeights[i];
-
-#pragma omp parallel for schedule(auto) num_threads(2)
-  for (int i = 0; i < N_HIDDEN; i++)
-    for (int t = 0; t < THREADS; t++) g->inputBiases[i].g += local[t].inputBiases[i];
-
-#pragma omp parallel for schedule(auto) num_threads(2)
-  for (int i = 0; i < N_HIDDEN * 2; i++)
-    for (int t = 0; t < THREADS; t++) g->outputWeights[i].g += local[t].outputWeights[i];
-
-  for (int t = 0; t < THREADS; t++) g->outputBias.g += local[t].outputBias;
 }

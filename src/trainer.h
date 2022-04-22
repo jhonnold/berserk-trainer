@@ -5,10 +5,10 @@
 #include "util.h"
 
 float TotalError(DataSet* data, NN* nn);
-void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* local);
+void Train(int batch, DataSet* data, NN* nn, BatchGradients* local);
 
-INLINE float Error(float r, Board* b) { return powf(fabs(r - b->wdl / 2.0f), 2.5f); }
+INLINE float Error(float r, Board* b) { return powf(fabs(r - b->wdl / 2.), 2.5); }
 
-INLINE float ErrorGradient(float r, Board* b) { return 2.5f * (r - b->wdl / 2.0f) * sqrtf(fabs(r - b->wdl / 2.0f)); }
+INLINE float ErrorGradient(float r, Board* b) { return 2.5 * (r - b->wdl / 2.0) * sqrtf(fabs(r - b->wdl / 2.0)); }
 
 #endif

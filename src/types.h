@@ -8,20 +8,22 @@
 #define N_HIDDEN 512
 #define N_OUTPUT 1
 
-#define THREADS 16
+#define THREADS 4
 #define BATCH_SIZE 16384
 
 extern float ALPHA;
-#define BETA1 0.95f
-#define BETA2 0.999f
-#define EPSILON 1e-8f
+#define BETA1 0.95
+#define BETA2 0.999
+#define EPSILON 1e-8
 
 #define LAMBDA (1.0 / (1024 * 1024))
 
 #define MAX_POSITIONS (2047 * 1024 * 1024)
-#define VALIDATION_POSITIONS (16 * 1024 * 1024)
+#define VALIDATION_POSITIONS (100000)
 
 #define CRELU_MAX 256
+
+#define ALIGN64 __attribute__((aligned(64)))
 
 enum {
   WHITE_PAWN,
@@ -54,7 +56,7 @@ typedef struct {
 
 typedef struct {
   int8_t n;
-  Feature features[2][32];
+  Feature features[32][2];
 } Features;
 
 typedef struct {
@@ -64,16 +66,16 @@ typedef struct {
 
 typedef struct {
   float outputBias;
-  float outputWeights[2 * N_HIDDEN] __attribute__((aligned(64)));
+  float outputWeights[2 * N_HIDDEN] ALIGN64;
 
-  float inputBiases[N_HIDDEN] __attribute__((aligned(64)));
-  float inputWeights[N_INPUT * N_HIDDEN] __attribute__((aligned(64)));
+  float inputBiases[N_HIDDEN] ALIGN64;
+  float inputWeights[N_INPUT * N_HIDDEN] ALIGN64;
 } NN;
 
 typedef struct {
   float output;
-  float acc1[2][N_HIDDEN] __attribute__((aligned(64)));
-} __attribute__((aligned(64))) NNAccumulators;
+  float acc1[2 * N_HIDDEN] ALIGN64;
+} ALIGN64 NNAccumulators;
 
 typedef struct {
   float g, M, V;
@@ -89,11 +91,11 @@ typedef struct {
 
 typedef struct {
   float outputBias;
-  float outputWeights[2 * N_HIDDEN];
+  float outputWeights[2 * N_HIDDEN] ALIGN64;
 
-  float inputBiases[N_HIDDEN];
-  float inputWeights[N_INPUT * N_HIDDEN];
-} BatchGradients;
+  float inputBiases[N_HIDDEN] ALIGN64;
+  float inputWeights[N_INPUT * N_HIDDEN] ALIGN64;
+} ALIGN64 BatchGradients;
 
 extern const Square psqt[];
 extern const Piece charToPiece[];

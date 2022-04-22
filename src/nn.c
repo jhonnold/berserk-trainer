@@ -15,25 +15,25 @@
 const int NETWORK_MAGIC = 'B' | 'R' << 8 | 'K' << 16 | 'R' << 24;
 
 void NNPredict(NN* nn, Features* f, Color stm, NNAccumulators* results) {
-  results->output = 0.0f;
+  results->output = nn->outputBias;
+
+  float* stmAcc = results->acc1;
+  float* xstmAcc = &results->acc1[N_HIDDEN];
 
   // Apply first layer
-  memcpy(results->acc1[WHITE], nn->inputBiases, sizeof(float) * N_HIDDEN);
-  memcpy(results->acc1[BLACK], nn->inputBiases, sizeof(float) * N_HIDDEN);
+  memcpy(stmAcc, nn->inputBiases, sizeof(float) * N_HIDDEN);
+  memcpy(xstmAcc, nn->inputBiases, sizeof(float) * N_HIDDEN);
 
   for (int i = 0; i < f->n; i++) {
     for (size_t j = 0; j < N_HIDDEN; j++) {
-      results->acc1[WHITE][j] += nn->inputWeights[f->features[WHITE][i] * N_HIDDEN + j];
-      results->acc1[BLACK][j] += nn->inputWeights[f->features[BLACK][i] * N_HIDDEN + j];
+      stmAcc[j] += nn->inputWeights[f->features[i][stm] * N_HIDDEN + j];
+      xstmAcc[j] += nn->inputWeights[f->features[i][stm ^ 1] * N_HIDDEN + j];
     }
   }
 
-  ReLU(results->acc1[WHITE], N_HIDDEN);
-  ReLU(results->acc1[BLACK], N_HIDDEN);
+  ReLU(results->acc1, 2 * N_HIDDEN);
 
-  results->output += DotProduct(results->acc1[stm], nn->outputWeights, N_HIDDEN) +
-                     DotProduct(results->acc1[stm ^ 1], nn->outputWeights + N_HIDDEN, N_HIDDEN) +  //
-                     nn->outputBias;
+  results->output += DotProduct(results->acc1, nn->outputWeights, 2 * N_HIDDEN);
 }
 
 NN* LoadNN(char* path) {
