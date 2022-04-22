@@ -78,16 +78,12 @@ typedef struct {
 } ALIGN64 NNAccumulators;
 
 typedef struct {
-  float g, M, V;
-} Gradient;
+  float mOutputBias, vOutputBias;
+  float mOutputWeights[2 * N_HIDDEN] ALIGN64, vOutputWeights[2 * N_HIDDEN] ALIGN64;
 
-typedef struct {
-  Gradient outputBias;
-  Gradient outputWeights[2 * N_HIDDEN];
-
-  Gradient inputBiases[N_HIDDEN];
-  Gradient inputWeights[N_INPUT * N_HIDDEN];
-} NNGradients;
+  float mInputBiases[N_HIDDEN] ALIGN64, vInputBiases[N_HIDDEN] ALIGN64;
+  float mInputWeights[N_INPUT * N_HIDDEN] ALIGN64, vInputWeights[N_INPUT * N_HIDDEN] ALIGN64;
+} ALIGN64 Optimizer;
 
 typedef struct {
   float outputBias;
@@ -95,7 +91,7 @@ typedef struct {
 
   float inputBiases[N_HIDDEN] ALIGN64;
   float inputWeights[N_INPUT * N_HIDDEN] ALIGN64;
-} ALIGN64 BatchGradients;
+} ALIGN64 Gradients;
 
 extern const Square psqt[];
 extern const Piece charToPiece[];

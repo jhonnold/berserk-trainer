@@ -61,10 +61,10 @@ int main(int argc, char** argv) {
   data->entries = malloc(sizeof(Board) * MAX_POSITIONS);
   LoadEntries(entriesPath, data, MAX_POSITIONS, VALIDATION_POSITIONS);
 
-  NNGradients* gradients = malloc(sizeof(NNGradients));
-  ClearGradients(gradients);
+  Optimizer* optimizer = malloc(sizeof(Optimizer));
+  memset(optimizer, 0, sizeof(Optimizer));
 
-  BatchGradients* local = malloc(sizeof(BatchGradients) * THREADS);
+  Gradients* gradients = malloc(sizeof(Gradients) * THREADS);
 
   printf("Calculating Validation Error...\n");
   float error = TotalError(validation, nn);
@@ -78,8 +78,8 @@ int main(int argc, char** argv) {
 
     uint32_t batches = data->n / BATCH_SIZE;
     for (uint32_t b = 0; b < batches; b++) {
-      Train(b, data, nn, local);
-      ApplyGradients(nn, gradients, local);
+      Train(b, data, nn, gradients);
+      ApplyGradients(nn, optimizer, gradients);
 
       printf("Batch: [#%d/%d]\n", b + 1, batches);
     }
@@ -123,8 +123,8 @@ float TotalError(DataSet* data, NN* nn) {
   return e / data->n;
 }
 
-void Train(int batch, DataSet* data, NN* nn, BatchGradients* local) {
-  for (int t = 0; t < THREADS; t++) memset(&local[t], 0, sizeof(BatchGradients));
+void Train(int batch, DataSet* data, NN* nn, Gradients* gradients) {
+  for (int t = 0; t < THREADS; t++) memset(&gradients[t], 0, sizeof(Gradients));
 
 #pragma omp parallel for schedule(auto) num_threads(THREADS)
   for (int n = 0; n < BATCH_SIZE; n++) {
@@ -164,9 +164,9 @@ void Train(int batch, DataSet* data, NN* nn, BatchGradients* local) {
     // ------------------------------------------------------------------------------------------
 
     // OUTPUT LAYER GRADIENTS -------------------------------------------------------------------
-    local[t].outputBias += delta;
+    gradients[t].outputBias += delta;
 
-    __m256* outputWeights = (__m256*)local[t].outputWeights;
+    __m256* outputWeights = (__m256*)gradients[t].outputWeights;
     for (size_t i = 0; i < 2 * CHUNKS; i++)
       outputWeights[i] = _mm256_add_ps(outputWeights[i], _mm256_mul_ps(acc[i], outputLoss));
     // ------------------------------------------------------------------------------------------
@@ -178,8 +178,8 @@ void Train(int batch, DataSet* data, NN* nn, BatchGradients* local) {
     __m256* stmLosses = &hiddenLosses[0];
     __m256* xstmLosses = &hiddenLosses[CHUNKS];
 
-    __m256* biasGradients = (__m256*)local[t].inputBiases;
-    __m256* weightGradients = (__m256*)local[t].inputWeights;
+    __m256* biasGradients = (__m256*)gradients[t].inputBiases;
+    __m256* weightGradients = (__m256*)gradients[t].inputWeights;
 
     for (size_t i = 0; i < CHUNKS; i++) {
       __m256 stmLasso = _mm256_blendv_ps(zero, lambda, _mm256_cmp_ps(stmActivations[i], zero, 30));
