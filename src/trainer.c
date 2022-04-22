@@ -191,18 +191,15 @@ void Train(int batch, DataSet* data, NN* nn, BatchGradients* local) {
       biasGradients[i] = _mm256_add_ps(biasGradients[i], _mm256_add_ps(lassos, losses));
     }
 
-    float* stmAcc = activations->acc1;
-    float* xstmAcc = &activations->acc1[N_HIDDEN];
-    float* stmLosses2 = (float*) hiddenLosses;
-    float* xstmLosses2 = (float*) &hiddenLosses[CHUNKS];
-
     for (int i = 0; i < f->n; i++) {
-      for (int j = 0; j < N_HIDDEN; j++) {
-        float stmLasso = LAMBDA * (stmAcc[j] > 0);
-        float xstmLasso = LAMBDA * (xstmAcc[j] > 0);
+      for (size_t j = 0; j < CHUNKS; j++) {
+        __m256 stmLasso = _mm256_blendv_ps(zero, lambda, _mm256_cmp_ps(stmActivations[j], zero, 30));
+        __m256 xstmLasso = _mm256_blendv_ps(zero, lambda, _mm256_cmp_ps(xstmActivations[j], zero, 30));
 
-        local[t].inputWeights[f->features[i][board.stm] * N_HIDDEN + j] += stmLosses2[j] + stmLasso;
-        local[t].inputWeights[f->features[i][board.stm ^ 1] * N_HIDDEN + j] += xstmLosses2[j] + xstmLasso;
+        weightGradients[f->features[i][board.stm] * CHUNKS + j] = _mm256_add_ps(
+            weightGradients[f->features[i][board.stm] * CHUNKS + j], _mm256_add_ps(stmLosses[j], stmLasso));
+        weightGradients[f->features[i][board.stm ^ 1] * CHUNKS + j] = _mm256_add_ps(
+            weightGradients[f->features[i][board.stm ^ 1] * CHUNKS + j], _mm256_add_ps(xstmLosses[j], xstmLasso));
       }
     }
     // ------------------------------------------------------------------------------------------
