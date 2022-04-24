@@ -57,3 +57,7 @@ dist
 
 *.log
 *.nn
+
+trainer
+.binpack
+binpack
