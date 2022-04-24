@@ -8,6 +8,18 @@
 #include "random.h"
 #include "util.h"
 
+void LoadBinpack(DataSet* dest, char* path, uint32_t n) {
+  FILE* fp = fopen(path, "rb");
+
+  if (fread(dest->entries, sizeof(Board), n, fp) != (size_t) n) {
+    printf("Load failure for %s!\n", path);
+    exit(1);
+  }
+
+  dest->n = n;
+  fclose(fp);
+}
+
 void LoadEntries(char* path, DataSet* data, uint32_t n, uint32_t offset) {
   FILE* fp = fopen(path, "r");
   if (fp == NULL) {

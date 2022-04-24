@@ -17,26 +17,63 @@
 int main(int argc, char** argv) {
   SeedRandom();
 
-  int c;
-
   char nnPath[128] = {0};
-  char entriesPath[128] = {0};
 
-  while ((c = getopt(argc, argv, "d:n:")) != -1) {
+  char samplesPath[128] = {0};
+  int numberOfFiles = 1;
+  int batchesPerFile = 10000;
+
+  char validationPath[128] = {0};
+  int numberOfValidations = 1000000;
+
+  int c;
+  while ((c = getopt(argc, argv, "n:s:c:b:v:z:")) != -1) {
     switch (c) {
-      case 'd':
-        strcpy(entriesPath, optarg);
-        break;
+      case 'h':
+        printf("\nSYNOPSIS");
+        printf("\n\t./trainer -n <network_file>       (default random net)");
+        printf("\n\t          -s <samples_file>       (required)");
+        printf("\n\t          -c [number_of_files]    (default 1)");
+        printf("\n\t          -b [batches_per_file]   (default 10000)\n");
+        printf("\nOPTIONS");
+        printf("\n\t-n network_file");
+        printf("\n\t\tNetwork file to load and start with for training. ");
+        printf("If not specified, a random one will be generated\n");
+        printf("\n\t-s samples_file");
+        printf("\n\t\tFile(s) for training samples. They will be loaded as <file>.#.binpack\n");
+        printf("\n\t-c number_of_files");
+        printf("\n\t\tThe number of files to load.\n");
+        printf("\n\t-b batches_per_file");
+        printf("\n\t\tThe number of batches in each file.\n");
+        exit(EXIT_SUCCESS);
       case 'n':
         strcpy(nnPath, optarg);
         break;
+      case 's':
+        strcpy(samplesPath, optarg);
+        break;
+      case 'b':
+        batchesPerFile = atoi(optarg);
+        break;
+      case 'c':
+        numberOfFiles = atoi(optarg);
+        break;
+      case 'v':
+        strcpy(validationPath, optarg);
+        break;
+      case 'z':
+        numberOfValidations = atoi(optarg);
+        break;
       case '?':
-        return 1;
+        exit(EXIT_FAILURE);
     }
   }
 
-  if (!entriesPath[0]) {
-    printf("No data file specified!\n");
+  if (!samplesPath[0]) {
+    printf("No samples file specified!\n");
+    return 1;
+  } else if (!validationPath[0]) {
+    printf("No validation path specified!\n");
     return 1;
   }
 
@@ -49,22 +86,16 @@ int main(int argc, char** argv) {
     nn = LoadNN(nnPath);
   }
 
-  printf("Loading entries from %s\n", entriesPath);
-
-  DataSet* validation = malloc(sizeof(DataSet));
-  validation->n = 0;
-  validation->entries = malloc(sizeof(Board) * VALIDATION_POSITIONS);
-  LoadEntries(entriesPath, validation, VALIDATION_POSITIONS, 0);
-
-  DataSet* data = malloc(sizeof(DataSet));
-  data->n = 0;
-  data->entries = malloc(sizeof(Board) * MAX_POSITIONS);
-  LoadEntries(entriesPath, data, MAX_POSITIONS, VALIDATION_POSITIONS);
-
   Optimizer* optimizer = malloc(sizeof(Optimizer));
   memset(optimizer, 0, sizeof(Optimizer));
 
   Gradients* gradients = malloc(sizeof(Gradients) * THREADS);
+
+  printf("Loading validation from %s\n", validationPath);
+  DataSet* validation = malloc(sizeof(DataSet));
+  validation->n = 0;
+  validation->entries = malloc(sizeof(Board) * numberOfValidations);
+  LoadBinpack(validation, validationPath, numberOfValidations);
 
   printf("Calculating Validation Error...\n");
   float error = TotalError(validation, nn);
@@ -73,15 +104,29 @@ int main(int argc, char** argv) {
   for (int epoch = 1; epoch <= 22; epoch++) {
     long epochStart = GetTimeMS();
 
-    printf("Shuffling...\n");
-    ShuffleData(data);
+    for (int f = 1; f <= numberOfFiles; f++) {
+      DataSet* data = malloc(sizeof(DataSet));
+      data->n = 0;
+      data->entries = malloc(sizeof(Board) * batchesPerFile * BATCH_SIZE);
 
-    uint32_t batches = data->n / BATCH_SIZE;
-    for (uint32_t b = 0; b < batches; b++) {
-      Train(b, data, nn, gradients);
-      ApplyGradients(nn, optimizer, gradients);
+      char fileToLoad[128];
+      sprintf(fileToLoad, "%s.%d.binpack", samplesPath, f);
+      printf("Loading entries from %s\n", fileToLoad);
+      LoadBinpack(data, fileToLoad, batchesPerFile * BATCH_SIZE);
 
-      printf("Batch: [#%d/%d]\n", b + 1, batches);
+      printf("Shuffling...\n");
+      ShuffleData(data);
+      
+      uint32_t bb = (f - 1) * batchesPerFile;
+      uint32_t batches = data->n / BATCH_SIZE;
+      for (uint32_t b = 0; b < batches; b++) {
+        Train(b, data, nn, gradients);
+        ApplyGradients(nn, optimizer, gradients);
+
+        printf("Batch: [#%d/%d]\n", bb + b + 1, numberOfFiles * batchesPerFile);
+      }
+
+      free(data->entries), free(data);
     }
 
     char buffer[64];
@@ -93,7 +138,8 @@ int main(int argc, char** argv) {
 
     long now = GetTimeMS();
     printf("Epoch: [#%5d], Error: [%1.8f], Delta: [%+1.8f], LR: [%.5f], Speed: [%9.0f pos/s], Time: [%lds]\n", epoch,
-           newError, error - newError, ALPHA, 1000.0 * data->n / (now - epochStart), (now - epochStart) / 1000);
+           newError, error - newError, ALPHA,
+           1000.0 * (numberOfFiles * batchesPerFile * BATCH_SIZE) / (now - epochStart), (now - epochStart) / 1000);
 
     error = newError;
 
