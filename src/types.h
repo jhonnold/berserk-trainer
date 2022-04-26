@@ -8,7 +8,7 @@
 #define N_HIDDEN 512
 #define N_OUTPUT 1
 
-#define THREADS 4
+#define THREADS 8
 #define BATCH_SIZE 16384
 
 extern float ALPHA;
@@ -18,8 +18,8 @@ extern float ALPHA;
 
 #define LAMBDA (1.0 / (1024 * 1024))
 
-#define MAX_POSITIONS (2047 * 1024 * 1024)
-#define VALIDATION_POSITIONS (100000)
+#define MAX_POSITIONS INT32_MAX
+#define VALIDATION_POSITIONS (15 * 1000 * 1000)
 
 #define CRELU_MAX 256
 

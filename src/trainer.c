@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
       Train(b, data, nn, gradients);
       ApplyGradients(nn, optimizer, gradients);
 
-      printf("Batch: [#%d/%d]\n", b + 1, batches);
+      if ((b + 1) % 1000 == 0) printf("Batch: [#%d/%d]\n", b + 1, batches);
     }
 
     char buffer[64];
@@ -98,16 +98,20 @@ int main(int argc, char** argv) {
     error = newError;
 
     // LR DROP
-    if (epoch == 20) ALPHA = 0.001;
-
-    if (epoch == 21) ALPHA = 0.0001;
+    if (epoch == 20) {
+      ALPHA = 0.001;
+      memset(optimizer, 0, sizeof(Optimizer));
+    } else if (epoch == 21) {
+      ALPHA = 0.0001;
+      memset(optimizer, 0, sizeof(Optimizer));
+    }
   }
 }
 
 float TotalError(DataSet* data, NN* nn) {
   float e = 0.0;
 
-#pragma omp parallel for schedule(auto) num_threads(THREADS) reduction(+ : e)
+#pragma omp parallel for schedule(static) num_threads(THREADS) reduction(+ : e)
   for (uint32_t i = 0; i < data->n; i++) {
     Board* board = &data->entries[i];
 
@@ -126,7 +130,7 @@ float TotalError(DataSet* data, NN* nn) {
 void Train(int batch, DataSet* data, NN* nn, Gradients* gradients) {
   for (int t = 0; t < THREADS; t++) memset(&gradients[t], 0, sizeof(Gradients));
 
-#pragma omp parallel for schedule(auto) num_threads(THREADS)
+#pragma omp parallel for schedule(static) num_threads(THREADS)
   for (int n = 0; n < BATCH_SIZE; n++) {
     const int t = omp_get_thread_num();
 

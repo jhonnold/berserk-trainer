@@ -46,7 +46,9 @@ void LoadDataEntry(char* buffer, Board* result) {
   }
 
   // Invert for black to move
-  if (result->stm == BLACK) result->wdl = 2 - result->wdl;
+  if (result->stm == BLACK) {
+    result->wdl = 2 - result->wdl;
+  }
 }
 
 void ShuffleData(DataSet* data) {
