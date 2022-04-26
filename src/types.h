@@ -26,6 +26,8 @@ extern float ALPHA;
 
 #define CRELU_MAX 256
 
+#define ALIGN64 __attribute__((aligned(64)))
+
 enum {
   WHITE_PAWN,
   WHITE_KNIGHT,
@@ -58,7 +60,7 @@ typedef struct {
 
 typedef struct {
   int8_t n;
-  Feature features[2][32];
+  Feature features[32][2];
 } Features;
 
 typedef struct {
@@ -68,16 +70,16 @@ typedef struct {
 
 typedef struct {
   float outputBias;
-  float outputWeights[2 * N_HIDDEN] __attribute__((aligned(64)));
+  float outputWeights[2 * N_HIDDEN] ALIGN64;
 
-  float inputBiases[N_HIDDEN] __attribute__((aligned(64)));
-  float inputWeights[N_INPUT * N_HIDDEN] __attribute__((aligned(64)));
+  float inputBiases[N_HIDDEN] ALIGN64;
+  float inputWeights[N_INPUT * N_HIDDEN] ALIGN64;
 } NN;
 
 typedef struct {
   float output;
-  float acc1[2][N_HIDDEN] __attribute__((aligned(64)));
-} __attribute__((aligned(64))) NNAccumulators;
+  float accumulator[2 * N_HIDDEN] ALIGN64;
+} ALIGN64 NetworkTrace;
 
 typedef struct {
   float g, M, V;
