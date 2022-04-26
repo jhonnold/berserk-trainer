@@ -15,7 +15,7 @@
 const int NETWORK_MAGIC = 'B' | 'R' << 8 | 'K' << 16 | 'R' << 24;
 
 void NNPredict(NN* nn, Features* f, Color stm, NNAccumulators* results) {
-  results->output = 0.0f;
+  results->output = 0.0;
 
   // Apply first layer
   memcpy(results->acc1[WHITE], nn->inputBiases, sizeof(float) * N_HIDDEN);

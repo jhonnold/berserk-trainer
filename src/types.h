@@ -8,18 +8,21 @@
 #define N_HIDDEN 512
 #define N_OUTPUT 1
 
-#define THREADS 16
+#define THREADS 12
 #define BATCH_SIZE 16384
 
 extern float ALPHA;
-#define BETA1 0.95f
-#define BETA2 0.999f
-#define EPSILON 1e-8f
+#define BETA1 0.95
+#define BETA2 0.999
+#define EPSILON 1e-8
+
+#define WDL 0.5
+#define EVAL 0.5
 
 #define LAMBDA (1.0 / (1024 * 1024))
 
-#define MAX_POSITIONS (2047 * 1024 * 1024)
-#define VALIDATION_POSITIONS (16 * 1024 * 1024)
+#define MAX_POSITIONS 1800000000
+#define VALIDATION_POSITIONS 15000000
 
 #define CRELU_MAX 256
 
@@ -48,9 +51,10 @@ typedef uint16_t Feature;
 typedef struct {
   Color stm, wdl;
   Square kings[2];
+  float eval;
   uint64_t occupancies;
   uint8_t pieces[16];
-} __attribute__((packed, aligned(4))) Board;
+} Board;
 
 typedef struct {
   int8_t n;

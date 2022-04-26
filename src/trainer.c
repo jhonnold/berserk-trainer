@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
   float error = TotalError(validation, nn);
   printf("Starting Error: [%1.8f]\n", error);
 
-  for (int epoch = 1; epoch <= 22; epoch++) {
+  for (int epoch = 1; epoch <= 40; epoch++) {
     long epochStart = GetTimeMS();
 
     printf("Shuffling...\n");
@@ -98,15 +98,15 @@ int main(int argc, char** argv) {
 
     // LR DROP
     if (epoch == 20)
-      ALPHA = 0.001f;
+      ALPHA = 0.001;
 
-    if (epoch == 21)
-      ALPHA = 0.0001f;
+    if (epoch == 30)
+      ALPHA = 0.0001;
   }
 }
 
 float TotalError(DataSet* data, NN* nn) {
-  float e = 0.0f;
+  float e = 0.0;
 
 #pragma omp parallel for schedule(auto) num_threads(THREADS) reduction(+ : e)
   for (uint32_t i = 0; i < data->n; i++) {
