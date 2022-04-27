@@ -5,10 +5,12 @@
 #include <stdbool.h>
 
 #define N_INPUT 1536
-#define N_HIDDEN 512
+#define N_HIDDEN 384
+#define N_HIDDEN_2 16
+#define N_HIDDEN_3 16
 #define N_OUTPUT 1
 
-#define THREADS 12
+#define THREADS 16
 #define BATCH_SIZE 16384
 
 extern float ALPHA;
@@ -70,7 +72,13 @@ typedef struct {
 
 typedef struct {
   float outputBias;
-  float outputWeights[2 * N_HIDDEN] ALIGN64;
+  float outputWeights[N_HIDDEN_3] ALIGN64;
+
+  float l2Biases[N_HIDDEN_3] ALIGN64;
+  float l2Weights[N_HIDDEN_2 * N_HIDDEN_3] ALIGN64;
+
+  float l1Biases[N_HIDDEN_2] ALIGN64;
+  float l1Weights[2 * N_HIDDEN * N_HIDDEN_2] ALIGN64;
 
   float inputBiases[N_HIDDEN] ALIGN64;
   float inputWeights[N_INPUT * N_HIDDEN] ALIGN64;
@@ -78,6 +86,8 @@ typedef struct {
 
 typedef struct {
   float output;
+  float l2Accumulator[N_HIDDEN_3] ALIGN64;
+  float l1Accumulator[N_HIDDEN_2] ALIGN64;
   float accumulator[2 * N_HIDDEN] ALIGN64;
 } ALIGN64 NetworkTrace;
 
@@ -87,18 +97,30 @@ typedef struct {
 
 typedef struct {
   Gradient outputBias;
-  Gradient outputWeights[2 * N_HIDDEN];
+  Gradient outputWeights[N_HIDDEN_3] ALIGN64;
 
-  Gradient inputBiases[N_HIDDEN];
-  Gradient inputWeights[N_INPUT * N_HIDDEN];
+  Gradient l2Biases[N_HIDDEN_3] ALIGN64;
+  Gradient l2Weights[N_HIDDEN_2 * N_HIDDEN_3] ALIGN64;
+
+  Gradient l1Biases[N_HIDDEN_2] ALIGN64;
+  Gradient l1Weights[2 * N_HIDDEN * N_HIDDEN_2] ALIGN64;
+
+  Gradient inputBiases[N_HIDDEN] ALIGN64;
+  Gradient inputWeights[N_INPUT * N_HIDDEN] ALIGN64;
 } NNGradients;
 
 typedef struct {
   float outputBias;
-  float outputWeights[2 * N_HIDDEN];
+  float outputWeights[N_HIDDEN_3] ALIGN64;
 
-  float inputBiases[N_HIDDEN];
-  float inputWeights[N_INPUT * N_HIDDEN];
+  float l2Biases[N_HIDDEN_3] ALIGN64;
+  float l2Weights[N_HIDDEN_2 * N_HIDDEN_3] ALIGN64;
+
+  float l1Biases[N_HIDDEN_2] ALIGN64;
+  float l1Weights[2 * N_HIDDEN * N_HIDDEN_2] ALIGN64;
+
+  float inputBiases[N_HIDDEN] ALIGN64;
+  float inputWeights[N_INPUT * N_HIDDEN] ALIGN64;
 } BatchGradients;
 
 extern const Square psqt[];
