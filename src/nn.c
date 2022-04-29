@@ -88,16 +88,16 @@ NN* LoadRandomNN() {
   srand(time(NULL));
   NN* nn = AlignedMalloc(sizeof(NN));
 
-  for (int i = 0; i < N_INPUT * N_HIDDEN; i++) nn->inputWeights[i] = RandomGaussian(0, sqrt(1.0 / 32));
+  for (int i = 0; i < N_INPUT * N_HIDDEN; i++) nn->inputWeights[i] = RandomGaussian(0, sqrtf(1.0f / 32));
   for (int i = 0; i < N_HIDDEN; i++) nn->inputBiases[i] = 0;
 
-  for (int i = 0; i < 2 * N_HIDDEN * N_HIDDEN_2; i++) nn->l1Weights[i] = RandomGaussian(0, sqrt(1.0 / N_HIDDEN));
+  for (int i = 0; i < 2 * N_HIDDEN * N_HIDDEN_2; i++) nn->l1Weights[i] = RandomGaussian(0, sqrtf(1.0f / N_HIDDEN));
   for (int i = 0; i < N_HIDDEN_2; i++) nn->l1Biases[i] = 0;
 
-  for (int i = 0; i < N_HIDDEN_2 * N_HIDDEN_3; i++) nn->l2Weights[i] = RandomGaussian(0, sqrt(2.0 / N_HIDDEN_2));
+  for (int i = 0; i < N_HIDDEN_2 * N_HIDDEN_3; i++) nn->l2Weights[i] = RandomGaussian(0, sqrtf(2.0f / N_HIDDEN_2));
   for (int i = 0; i < N_HIDDEN_3; i++) nn->l2Biases[i] = 0;
 
-  for (int i = 0; i < N_HIDDEN_3; i++) nn->outputWeights[i] = RandomGaussian(0, sqrt(2.0 / N_HIDDEN_3));
+  for (int i = 0; i < N_HIDDEN_3; i++) nn->outputWeights[i] = RandomGaussian(0, sqrtf(2.0f / N_HIDDEN_3));
   nn->outputBias = 0;
 
   return nn;

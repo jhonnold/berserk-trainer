@@ -11,13 +11,13 @@
 
 long GetTimeMS();
 
-INLINE float Sigmoid(float s) { return 1.0 / (1.0 + expf(-s * SS)); }
+INLINE float Sigmoid(float s) { return 1.0f / (1.0f + expf(-s * SS)); }
 
-INLINE float SigmoidPrime(float s) { return s * (1.0 - s) * SS; }
+INLINE float SigmoidPrime(float s) { return s * (1.0f - s) * SS; }
 
-INLINE float ReLUPrime(float s) { return s > 0.0; }
+INLINE float ReLUPrime(float s) { return s > 0.0f; }
 
-INLINE float CReLUPrime(float s) { return s > 0.0 && s < CRELU_MAX; }
+INLINE float CReLUPrime(float s) { return s > 0.0f && s < CRELU_MAX; }
 
 INLINE uint64_t NetworkHash(NN* nn) {
   uint64_t hash = 0;

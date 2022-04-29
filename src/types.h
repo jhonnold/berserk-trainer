@@ -21,10 +21,10 @@ extern float ALPHA;
 #define WDL 0.5
 #define EVAL 0.5
 
-#define LAMBDA (1.0 / (1024 * 1024))
+#define LAMBDA (1.0f / (1024 * 1024))
 
-#define MAX_POSITIONS 1800000000
-#define VALIDATION_POSITIONS 15000000
+#define MAX_POSITIONS 18000000
+#define VALIDATION_POSITIONS 150000
 
 #define CRELU_MAX 256
 

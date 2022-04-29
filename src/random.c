@@ -39,10 +39,10 @@ float RandomGaussian(float mu, float sigma) {
   do {
     U1 = -1 + ((float)rand() / RAND_MAX) * 2;
     U2 = -1 + ((float)rand() / RAND_MAX) * 2;
-    W = pow(U1, 2) + pow(U2, 2);
+    W = powf(U1, 2) + powf(U2, 2);
   } while (W >= 1 || W == 0);
 
-  mult = sqrt((-2 * log(W)) / W);
+  mult = sqrtf((-2 * logf(W)) / W);
   X1 = U1 * mult;
   X2 = U2 * mult;
 

@@ -77,10 +77,15 @@ int main(int argc, char** argv) {
 
     uint32_t batches = data->n / BATCH_SIZE;
     for (uint32_t b = 0; b < batches; b++) {
-      Train(b, data, nn, gradients, local);
-      ApplyGradients(nn, gradients);
+      float e = Train(b, data, nn, local);
+      ApplyGradients(nn, gradients, local);
 
-      if ((b + 1) % 1000 == 0) printf("Batch: [#%d/%d]\n", b + 1, batches);
+      if (b == 0 || (b + 1) % 250 == 0) {
+        long now = GetTimeMS();
+
+        printf("Batch: [#%d/%d], Error: [%1.8f], Speed: [%9.0f pos/s]\n", b + 1, batches, e,
+               1000.0f * BATCH_SIZE * (b + 1) / (now - epochStart));
+      }
     }
 
     char buffer[64];
@@ -92,19 +97,19 @@ int main(int argc, char** argv) {
 
     long now = GetTimeMS();
     printf("Epoch: [#%5d], Error: [%1.8f], Delta: [%+1.8f], LR: [%.5f], Speed: [%9.0f pos/s], Time: [%lds]\n", epoch,
-           newError, error - newError, ALPHA, 1000.0 * data->n / (now - epochStart), (now - epochStart) / 1000);
+           newError, error - newError, ALPHA, 1000.0f * data->n / (now - epochStart), (now - epochStart) / 1000);
 
     error = newError;
 
     // LR DROP
-    if (epoch == 20) ALPHA = 0.001;
+    if (epoch == 20) ALPHA = 0.001f;
 
-    if (epoch == 21) ALPHA = 0.0001;
+    if (epoch == 21) ALPHA = 0.0001f;
   }
 }
 
 float TotalError(DataSet* data, NN* nn) {
-  float e = 0.0;
+  float e = 0.0f;
 
 #pragma omp parallel for schedule(auto) num_threads(THREADS) reduction(+ : e)
   for (uint32_t i = 0; i < data->n; i++) {
@@ -122,11 +127,13 @@ float TotalError(DataSet* data, NN* nn) {
   return e / data->n;
 }
 
-void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* local) {
+float Train(int batch, DataSet* data, NN* nn, BatchGradients* local) {
 #pragma omp parallel for schedule(auto) num_threads(THREADS)
   for (int t = 0; t < THREADS; t++) memset(&local[t], 0, sizeof(BatchGradients));
 
-#pragma omp parallel for schedule(auto) num_threads(THREADS)
+  float e = 0.0;
+
+#pragma omp parallel for schedule(auto) num_threads(THREADS) reduction(+ : e)
   for (int n = 0; n < BATCH_SIZE; n++) {
     const int t = omp_get_thread_num();
 
@@ -139,6 +146,8 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     NNPredict(nn, f, board.stm, trace);
 
     float out = Sigmoid(trace->output);
+
+    e += Error(out, &board);
 
     // LOSS CALCULATIONS ------------------------------------------------------------------------
     float outputLoss = SigmoidPrime(out) * ErrorGradient(out, &board);
@@ -194,33 +203,5 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     // ------------------------------------------------------------------------------------------
   }
 
-#pragma omp parallel for schedule(auto) num_threads(4)
-  for (int i = 0; i < N_INPUT * N_HIDDEN; i++)
-    for (int t = 0; t < THREADS; t++) g->inputWeights[i].g += local[t].inputWeights[i];
-
-#pragma omp parallel for schedule(auto) num_threads(2)
-  for (int i = 0; i < N_HIDDEN; i++)
-    for (int t = 0; t < THREADS; t++) g->inputBiases[i].g += local[t].inputBiases[i];
-
-#pragma omp parallel for schedule(auto) num_threads(2)
-  for (int i = 0; i < 2 * N_HIDDEN * N_HIDDEN_2; i++)
-    for (int t = 0; t < THREADS; t++) g->l1Weights[i].g += local[t].l1Weights[i];
-
-#pragma omp parallel for schedule(auto) num_threads(2)
-  for (int i = 0; i < N_HIDDEN_2; i++)
-    for (int t = 0; t < THREADS; t++) g->l1Biases[i].g += local[t].l1Biases[i];
-
-#pragma omp parallel for schedule(auto) num_threads(2)
-  for (int i = 0; i < N_HIDDEN_2 * N_HIDDEN_3; i++)
-    for (int t = 0; t < THREADS; t++) g->l2Weights[i].g += local[t].l2Weights[i];
-
-#pragma omp parallel for schedule(auto) num_threads(2)
-  for (int i = 0; i < N_HIDDEN_3; i++)
-    for (int t = 0; t < THREADS; t++) g->l2Biases[i].g += local[t].l2Biases[i];
-
-#pragma omp parallel for schedule(auto) num_threads(2)
-  for (int i = 0; i < N_HIDDEN_3; i++)
-    for (int t = 0; t < THREADS; t++) g->outputWeights[i].g += local[t].outputWeights[i];
-
-  for (int t = 0; t < THREADS; t++) g->outputBias.g += local[t].outputBias;
+  return e / BATCH_SIZE;
 }
