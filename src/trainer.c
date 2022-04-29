@@ -97,28 +97,26 @@ int main(int argc, char** argv) {
     error = newError;
 
     // LR DROP
-    if (epoch == 20)
-      ALPHA = 0.001f;
+    if (epoch == 20) ALPHA = 0.001;
 
-    if (epoch == 21)
-      ALPHA = 0.0001f;
+    if (epoch == 21) ALPHA = 0.0001;
   }
 }
 
 float TotalError(DataSet* data, NN* nn) {
-  float e = 0.0f;
+  float e = 0.0;
 
 #pragma omp parallel for schedule(auto) num_threads(THREADS) reduction(+ : e)
   for (uint32_t i = 0; i < data->n; i++) {
     Board* board = &data->entries[i];
 
-    NNAccumulators results[1];
+    NetworkTrace trace[1];
     Features f[1];
 
     ToFeatures(board, f);
-    NNPredict(nn, f, board->stm, results);
+    NNPredict(nn, f, board->stm, trace);
 
-    e += Error(Sigmoid(results->output), board);
+    e += Error(Sigmoid(trace->output), board);
   }
 
   return e / data->n;
@@ -134,49 +132,44 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
 
     Board board = data->entries[n + batch * BATCH_SIZE];
 
-    NNAccumulators activations[1];
+    NetworkTrace trace[1];
     Features f[1];
 
     ToFeatures(&board, f);
-    NNPredict(nn, f, board.stm, activations);
+    NNPredict(nn, f, board.stm, trace);
 
-    float out = Sigmoid(activations->output);
+    float out = Sigmoid(trace->output);
 
     // LOSS CALCULATIONS ------------------------------------------------------------------------
     float outputLoss = SigmoidPrime(out) * ErrorGradient(out, &board);
 
-    float hiddenLosses[2][N_HIDDEN];
-    for (int i = 0; i < N_HIDDEN; i++) {
-      hiddenLosses[board.stm][i] = outputLoss * nn->outputWeights[i] * ReLUPrime(activations->acc1[board.stm][i]);
-      hiddenLosses[board.stm ^ 1][i] =
-          outputLoss * nn->outputWeights[i + N_HIDDEN] * ReLUPrime(activations->acc1[board.stm ^ 1][i]);
-    }
+    float hiddenLosses[2 * N_HIDDEN];
+    for (int i = 0; i < 2 * N_HIDDEN; i++)
+      hiddenLosses[i] = outputLoss * nn->outputWeights[i] * ReLUPrime(trace->accumulator[i]);
     // ------------------------------------------------------------------------------------------
 
     // OUTPUT LAYER GRADIENTS -------------------------------------------------------------------
     local[t].outputBias += outputLoss;
-    for (int i = 0; i < N_HIDDEN; i++) {
-      local[t].outputWeights[i] += activations->acc1[board.stm][i] * outputLoss;
-      local[t].outputWeights[i + N_HIDDEN] += activations->acc1[board.stm ^ 1][i] * outputLoss;
-    }
+    for (int i = 0; i < 2 * N_HIDDEN; i++) local[t].outputWeights[i] += trace->accumulator[i] * outputLoss;
     // ------------------------------------------------------------------------------------------
 
     // INPUT LAYER GRADIENTS --------------------------------------------------------------------
-    for (int i = 0; i < N_HIDDEN; i++) {
-      float stmLasso = LAMBDA * (activations->acc1[board.stm][i] > 0);
-      float xstmLasso = LAMBDA * (activations->acc1[board.stm ^ 1][i] > 0);
+    float lassos[2 * N_HIDDEN];
+    for (int i = 0; i < 2 * N_HIDDEN; i++) lassos[i] = LAMBDA * (trace->accumulator[i] > 0);
 
-      local[t].inputBiases[i] += hiddenLosses[board.stm][i] + hiddenLosses[board.stm ^ 1][i] + stmLasso + xstmLasso;
-    }
+    float* stmLosses = hiddenLosses;
+    float* xstmLosses = &hiddenLosses[N_HIDDEN];
+
+    float* stmLassos = lassos;
+    float* xstmLassos = &lassos[N_HIDDEN];
+
+    for (int i = 0; i < N_HIDDEN; i++)
+      local[t].inputBiases[i] += stmLosses[i] + xstmLosses[i] + stmLassos[i] + xstmLassos[i];
 
     for (int i = 0; i < f->n; i++) {
       for (int j = 0; j < N_HIDDEN; j++) {
-        float stmLasso = LAMBDA * (activations->acc1[board.stm][j] > 0);
-        float xstmLasso = LAMBDA * (activations->acc1[board.stm ^ 1][j] > 0);
-
-        local[t].inputWeights[f->features[board.stm][i] * N_HIDDEN + j] += hiddenLosses[board.stm][j] + stmLasso;
-        local[t].inputWeights[f->features[board.stm ^ 1][i] * N_HIDDEN + j] +=
-            hiddenLosses[board.stm ^ 1][j] + xstmLasso;
+        local[t].inputWeights[f->features[i][board.stm] * N_HIDDEN + j] += stmLosses[j] + stmLassos[j];
+        local[t].inputWeights[f->features[i][board.stm ^ 1] * N_HIDDEN + j] += xstmLosses[j] + xstmLassos[j];
       }
     }
     // ------------------------------------------------------------------------------------------

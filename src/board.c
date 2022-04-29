@@ -16,8 +16,8 @@ void ToFeatures(Board* board, Features* f) {
     Square sq = popLsb(&bb);
     Piece pc = getPiece(board->pieces, f->n);
 
-    f->features[WHITE][f->n] = idx(pc, sq, board->kings[WHITE], WHITE);
-    f->features[BLACK][f->n] = idx(pc, sq, board->kings[BLACK], BLACK);
+    f->features[f->n][WHITE] = idx(pc, sq, board->kings[WHITE], WHITE);
+    f->features[f->n][BLACK] = idx(pc, sq, board->kings[BLACK], BLACK);
 
     f->n++;
   }

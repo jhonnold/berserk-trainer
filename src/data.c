@@ -45,8 +45,14 @@ void LoadDataEntry(char* buffer, Board* result) {
     exit(1);
   }
 
+  int eval = atoi(strstr(buffer, "] ") + 2);
+  result->eval = Sigmoid(eval);
+
   // Invert for black to move
-  if (result->stm == BLACK) result->wdl = 2 - result->wdl;
+  if (result->stm == BLACK) {
+    result->wdl = 2 - result->wdl;
+    result->eval = 1.0 - result->eval;
+  }
 }
 
 void ShuffleData(DataSet* data) {
