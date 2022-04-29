@@ -77,10 +77,13 @@ int main(int argc, char** argv) {
 
     uint32_t batches = data->n / BATCH_SIZE;
     for (uint32_t b = 0; b < batches; b++) {
-      Train(b, data, nn, gradients, local);
-      ApplyGradients(nn, gradients);
+      uint8_t active[N_INPUT] = {0};
+      ITERATION++;
 
-      if ((b + 1) % 1000 == 0) printf("Batch: [#%d/%d]\n", b + 1, batches);
+      float e = Train(b, data, nn, local, active);
+      ApplyGradients(nn, gradients, local, active);
+
+      printf("Batch: [#%d/%d], Error: [%1.8f]\n", b + 1, batches, e);
     }
 
     char buffer[64];
@@ -106,7 +109,7 @@ int main(int argc, char** argv) {
 float TotalError(DataSet* data, NN* nn) {
   float e = 0.0;
 
-#pragma omp parallel for schedule(auto) num_threads(THREADS) reduction(+ : e)
+#pragma omp parallel for schedule(static) num_threads(THREADS) reduction(+ : e)
   for (uint32_t i = 0; i < data->n; i++) {
     Board* board = &data->entries[i];
 
@@ -122,11 +125,14 @@ float TotalError(DataSet* data, NN* nn) {
   return e / data->n;
 }
 
-void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* local) {
-#pragma omp parallel for schedule(auto) num_threads(THREADS)
+float Train(int batch, DataSet* data, NN* nn, BatchGradients* local, uint8_t* active) {
+#pragma omp parallel for schedule(static) num_threads(THREADS)
   for (int t = 0; t < THREADS; t++) memset(&local[t], 0, sizeof(BatchGradients));
 
-#pragma omp parallel for schedule(auto) num_threads(THREADS)
+  uint8_t actives[THREADS][N_INPUT] = {0};
+  float e = 0.0;
+
+#pragma omp parallel for schedule(static) num_threads(THREADS) reduction(+ : e)
   for (int n = 0; n < BATCH_SIZE; n++) {
     const int t = omp_get_thread_num();
 
@@ -139,6 +145,7 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     NNPredict(nn, f, board.stm, trace);
 
     float out = Sigmoid(trace->output);
+    e += Error(out, &board);
 
     // LOSS CALCULATIONS ------------------------------------------------------------------------
     float outputLoss = SigmoidPrime(out) * ErrorGradient(out, &board);
@@ -167,6 +174,8 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
       local[t].inputBiases[i] += stmLosses[i] + xstmLosses[i] + stmLassos[i] + xstmLassos[i];
 
     for (int i = 0; i < f->n; i++) {
+      actives[t][f->features[i][board.stm]] = actives[t][f->features[i][board.stm ^ 1]] = 1;
+
       for (int j = 0; j < N_HIDDEN; j++) {
         local[t].inputWeights[f->features[i][board.stm] * N_HIDDEN + j] += stmLosses[j] + stmLassos[j];
         local[t].inputWeights[f->features[i][board.stm ^ 1] * N_HIDDEN + j] += xstmLosses[j] + xstmLassos[j];
@@ -175,17 +184,8 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     // ------------------------------------------------------------------------------------------
   }
 
-#pragma omp parallel for schedule(auto) num_threads(4)
-  for (int i = 0; i < N_INPUT * N_HIDDEN; i++)
-    for (int t = 0; t < THREADS; t++) g->inputWeights[i].g += local[t].inputWeights[i];
+  for (int t = 0; t < THREADS; t++)
+    for (int i = 0; i < N_INPUT; i++) active[i] |= actives[t][i];
 
-#pragma omp parallel for schedule(auto) num_threads(2)
-  for (int i = 0; i < N_HIDDEN; i++)
-    for (int t = 0; t < THREADS; t++) g->inputBiases[i].g += local[t].inputBiases[i];
-
-#pragma omp parallel for schedule(auto) num_threads(2)
-  for (int i = 0; i < N_HIDDEN * 2; i++)
-    for (int t = 0; t < THREADS; t++) g->outputWeights[i].g += local[t].outputWeights[i];
-
-  for (int t = 0; t < THREADS; t++) g->outputBias.g += local[t].outputBias;
+  return e / BATCH_SIZE;
 }

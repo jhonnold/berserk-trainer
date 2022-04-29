@@ -4,11 +4,11 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define N_INPUT 1536
-#define N_HIDDEN 512
+#define N_INPUT (64 * 12 * 64)
+#define N_HIDDEN 256
 #define N_OUTPUT 1
 
-#define THREADS 12
+#define THREADS 24
 #define BATCH_SIZE 16384
 
 extern float ALPHA;
@@ -21,8 +21,8 @@ extern float ALPHA;
 
 #define LAMBDA (1.0 / (1024 * 1024))
 
-#define MAX_POSITIONS 1800000000
-#define VALIDATION_POSITIONS 15000000
+#define MAX_POSITIONS 18000000
+#define VALIDATION_POSITIONS 150000
 
 #define CRELU_MAX 256
 
@@ -100,6 +100,9 @@ typedef struct {
   float inputBiases[N_HIDDEN];
   float inputWeights[N_INPUT * N_HIDDEN];
 } BatchGradients;
+
+extern int ITERATION;
+extern int LAST_SEEN[N_INPUT];
 
 extern const Square psqt[];
 extern const Piece charToPiece[];
