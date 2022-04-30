@@ -41,7 +41,7 @@ void ApplyGradients(NN* nn, NNGradients* grads, BatchGradients* local) {
 
     UpdateAndApplyGradient(&nn->l1Weights[i], &grads->l1Weights[i], g);
 
-    nn->l1Weights[i] = fmaxf(-127.0f / 64, fminf(127.0f / 64, nn->l1Weights[i]));
+    nn->l1Weights[i] = fmaxf(-127.0f / 32, fminf(127.0f / 32, nn->l1Weights[i]));
   }
 
 #pragma omp parallel for schedule(auto) num_threads(THREADS)
@@ -58,8 +58,6 @@ void ApplyGradients(NN* nn, NNGradients* grads, BatchGradients* local) {
     for (int t = 0; t < THREADS; t++) g += local[t].l2Weights[i];
 
     UpdateAndApplyGradient(&nn->l2Weights[i], &grads->l2Weights[i], g);
-
-    nn->l2Weights[i] = fmaxf(-127.0f / 64, fminf(127.0f / 64, nn->l2Weights[i]));
   }
 
 #pragma omp parallel for schedule(auto) num_threads(THREADS)
@@ -76,9 +74,6 @@ void ApplyGradients(NN* nn, NNGradients* grads, BatchGradients* local) {
     for (int t = 0; t < THREADS; t++) g += local[t].outputWeights[i];
 
     UpdateAndApplyGradient(&nn->outputWeights[i], &grads->outputWeights[i], g);
-
-    nn->outputWeights[i] =
-        fmaxf(-127.0f * 127.0f / 16, fminf(127.0f * 127.0f / 16, nn->outputWeights[i]));
   }
 
   float g = 0.0f;
