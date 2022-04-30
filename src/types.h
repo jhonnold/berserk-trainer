@@ -4,11 +4,11 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define N_INPUT (64 * 12 * 64)
-#define N_HIDDEN 256
+#define N_INPUT (16 * 12 * 32)
+#define N_HIDDEN 512
 #define N_OUTPUT 1
 
-#define THREADS 24
+#define THREADS 16
 #define BATCH_SIZE 16384
 
 extern float ALPHA;
@@ -21,8 +21,8 @@ extern float ALPHA;
 
 #define LAMBDA (1.0 / (1024 * 1024))
 
-#define MAX_POSITIONS 18000000
-#define VALIDATION_POSITIONS 150000
+#define MAX_POSITIONS 1800000000
+#define VALIDATION_POSITIONS 15000000
 
 #define CRELU_MAX 256
 
@@ -109,5 +109,6 @@ extern const Piece charToPiece[];
 extern const Piece opposite[];
 extern const int8_t scalar[];
 extern const float SS;
+extern const Feature kingBucket[64];
 
 #endif
