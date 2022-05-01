@@ -7,7 +7,6 @@
 #include "types.h"
 #include "util.h"
 
-
 void UpdateAndApplyGradientFast(float* v, Gradient* grad, float g) {
   grad->M = BETA1 * grad->M + (1.0 - BETA1) * g;
   grad->V = BETA2 * grad->V + (1.0 - BETA2) * g * g;

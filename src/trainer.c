@@ -69,32 +69,35 @@ int main(int argc, char** argv) {
   float error = TotalError(validation, nn);
   printf("Starting Error: [%1.8f]\n", error);
 
+  int totalBatches = 1, saveRate = data->n / BATCH_SIZE < 6144 ? data->n / BATCH_SIZE : 6144;
+
   for (int epoch = 1; epoch <= 22; epoch++) {
     long epochStart = GetTimeMS();
 
-    printf("Shuffling...\n");
+    printf("\rShuffling...");
     ShuffleData(data);
 
     uint32_t batches = data->n / BATCH_SIZE;
-    for (uint32_t b = 0; b < batches; b++) {
+    for (uint32_t b = 0; b < batches; b++, totalBatches++) {
       uint8_t active[N_INPUT] = {0};
       ITERATION++;
 
       float e = Train(b, data, nn, local, active);
       ApplyGradients(nn, gradients, local, active);
 
-      printf("Batch: [#%d/%d], Error: [%1.8f]\n", b + 1, batches, e);
+      if ((b + 1) % 50 == 0) printf("\rBatch: [#%d/%d], Error: [%1.8f]", b + 1, batches, e);
+
+      if (totalBatches % saveRate == 0) {
+        char buffer[64];
+        sprintf(buffer, "../nets/berserk-kb.e%d.2x%d.nn", totalBatches / saveRate, N_HIDDEN);
+        SaveNN(nn, buffer);
+      }
     }
 
-    char buffer[64];
-    sprintf(buffer, "../nets/berserk-kb.e%d.2x%d.nn", epoch, N_HIDDEN);
-    SaveNN(nn, buffer);
-
-    printf("Calculating Validation Error...\n");
     float newError = TotalError(validation, nn);
 
     long now = GetTimeMS();
-    printf("Epoch: [#%5d], Error: [%1.8f], Delta: [%+1.8f], LR: [%.5f], Speed: [%9.0f pos/s], Time: [%lds]\n", epoch,
+    printf("\rEpoch: [#%5d], Error: [%1.8f], Delta: [%+1.8f], LR: [%.5f], Speed: [%9.0f pos/s], Time: [%lds]\n", epoch,
            newError, error - newError, ALPHA, 1000.0 * data->n / (now - epochStart), (now - epochStart) / 1000);
 
     error = newError;

@@ -6,7 +6,7 @@
 
 INLINE Square mirror(Square s) { return s ^ 56; }
 
-INLINE Feature kIdx(Square k, Square s) { return 8 * ((s & 4) == (k & 4)) + kingBucket[k]; }
+INLINE Feature kIdx(Square k, Square s) { return 4 * ((s & 4) == (k & 4)) + kingBucket[k]; }
 
 INLINE Piece inv(Piece p) { return opposite[p]; }
 

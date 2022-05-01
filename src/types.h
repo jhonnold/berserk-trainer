@@ -4,7 +4,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define N_INPUT (16 * 12 * 32)
+#define N_INPUT (8 * 12 * 32)
 #define N_HIDDEN 512
 #define N_OUTPUT 1
 
@@ -21,7 +21,7 @@ extern float ALPHA;
 
 #define LAMBDA (1.0 / (1024 * 1024))
 
-#define MAX_POSITIONS 1800000000
+#define MAX_POSITIONS 1850000000
 #define VALIDATION_POSITIONS 15000000
 
 #define CRELU_MAX 256
