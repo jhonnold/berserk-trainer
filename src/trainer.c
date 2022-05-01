@@ -16,49 +16,82 @@
 int main(int argc, char** argv) {
   SeedRandom();
 
+  uint8_t binaryRead = 0;
+
+  uint64_t entries = 1000000000;
+  uint64_t validations = 1000000;
+
+  char baseNetworkPath[128] = {0};
+  char samplesPath[128] = {0};
+  char validationsPath[128] = {0};
+
+  uint8_t writing = 0;
+  char outputPath[128] = {0};
+
   int c;
-
-  char nnPath[128] = {0};
-  char entriesPath[128] = {0};
-
-  while ((c = getopt(argc, argv, "d:n:")) != -1) {
+  while ((c = getopt(argc, argv, "bc:v:z:w:d:n:")) != -1) {
     switch (c) {
       case 'd':
-        strcpy(entriesPath, optarg);
+        strcpy(samplesPath, optarg);
+        break;
+      case 'c':
+        entries = atoll(optarg);
+        break;
+      case 'v':
+        strcpy(validationsPath, optarg);
+        break;
+      case 'z':
+        validations = atoll(optarg);
         break;
       case 'n':
-        strcpy(nnPath, optarg);
+        strcpy(baseNetworkPath, optarg);
+        break;
+      case 'w':
+        strcpy(outputPath, optarg);
+        writing = 1;
+        break;
+      case 'b':
+        binaryRead = 1;
         break;
       case '?':
         return 1;
     }
   }
 
-  if (!entriesPath[0]) {
+  if (!samplesPath[0]) {
     printf("No data file specified!\n");
     return 1;
   }
 
+  if (writing) {
+    WriteToFile(outputPath, samplesPath);
+    exit(0);
+  }
+
   NN* nn;
-  if (!nnPath[0]) {
+  if (!baseNetworkPath[0]) {
     printf("No net specified, generating a random net.\n");
     nn = LoadRandomNN();
   } else {
-    printf("Loading net from %s\n", nnPath);
-    nn = LoadNN(nnPath);
+    printf("Loading net from %s\n", baseNetworkPath);
+    nn = LoadNN(baseNetworkPath);
   }
 
-  printf("Loading entries from %s\n", entriesPath);
+  printf("Loading entries from %s\n", samplesPath);
 
   DataSet* validation = malloc(sizeof(DataSet));
+  validation->entries = NULL;
   validation->n = 0;
-  validation->entries = malloc(sizeof(Board) * VALIDATION_POSITIONS);
-  LoadEntries(entriesPath, validation, VALIDATION_POSITIONS, 0);
 
   DataSet* data = malloc(sizeof(DataSet));
+  data->entries = malloc(sizeof(Board) * BATCHES_PER_LOAD * BATCH_SIZE);
   data->n = 0;
-  data->entries = malloc(sizeof(Board) * MAX_POSITIONS);
-  LoadEntries(entriesPath, data, MAX_POSITIONS, VALIDATION_POSITIONS);
+
+  if (binaryRead) {
+    LoadEntriesBinary(validationsPath, validation, validations, 0);
+  } else {
+    LoadEntries(validationsPath, validation, validations, 0);
+  }
 
   NNGradients* gradients = malloc(sizeof(NNGradients));
   ClearGradients(gradients);
@@ -72,15 +105,30 @@ int main(int argc, char** argv) {
   for (int epoch = 1; epoch <= 22; epoch++) {
     long epochStart = GetTimeMS();
 
-    printf("Shuffling...\n");
-    ShuffleData(data);
+    int totalBatches = 1;
+    int batches = entries / BATCH_SIZE;
+    int diskLoads = ceilf((double)batches / BATCHES_PER_LOAD);
 
-    uint32_t batches = data->n / BATCH_SIZE;
-    for (uint32_t b = 0; b < batches; b++) {
-      Train(b, data, nn, gradients, local);
-      ApplyGradients(nn, gradients);
+    for (int d = 0; d < diskLoads; d++) {
+      int loadCount = min(BATCH_SIZE * BATCHES_PER_LOAD, entries - d * (BATCH_SIZE * BATCHES_PER_LOAD));
 
-      if ((b + 1) % 1000 == 0) printf("Batch: [#%d/%d]\n", b + 1, batches);
+      if (binaryRead)
+        LoadEntriesBinary(samplesPath, data, loadCount, d * loadCount);
+      else
+        LoadEntries(samplesPath, data, loadCount, d * loadCount);
+
+      printf("Shuffling...\n");
+      ShuffleData(data);
+
+      int diskLoadBatches = data->n / BATCH_SIZE;
+      for (int b = 0; b < diskLoadBatches; b++, totalBatches++) {
+        float be = Train(b, data, nn, gradients, local);
+        ApplyGradients(nn, gradients, local);
+
+        long now = GetTimeMS();
+        printf("Batch: [#%d/%d], Error: [%1.8f], Speed: [%9.0f pos/s]\n", totalBatches, batches, be,
+               1000.0 * totalBatches * BATCH_SIZE / (now - epochStart));
+      }
     }
 
     char buffer[64];
@@ -91,8 +139,8 @@ int main(int argc, char** argv) {
     float newError = TotalError(validation, nn);
 
     long now = GetTimeMS();
-    printf("Epoch: [#%5d], Error: [%1.8f], Delta: [%+1.8f], LR: [%.5f], Speed: [%9.0f pos/s], Time: [%lds]\n", epoch,
-           newError, error - newError, ALPHA, 1000.0 * data->n / (now - epochStart), (now - epochStart) / 1000);
+    printf("Epoch: [#%5d], Error: [%1.8f], Delta: [%+1.8f], LR: [%.5f], Time: [%lds]\n", epoch, newError,
+           error - newError, ALPHA, (now - epochStart) / 1000);
 
     error = newError;
 
@@ -106,7 +154,7 @@ int main(int argc, char** argv) {
 float TotalError(DataSet* data, NN* nn) {
   float e = 0.0;
 
-#pragma omp parallel for schedule(auto) num_threads(THREADS) reduction(+ : e)
+#pragma omp parallel for schedule(static) num_threads(THREADS) reduction(+ : e)
   for (uint32_t i = 0; i < data->n; i++) {
     Board* board = &data->entries[i];
 
@@ -122,11 +170,13 @@ float TotalError(DataSet* data, NN* nn) {
   return e / data->n;
 }
 
-void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* local) {
-#pragma omp parallel for schedule(auto) num_threads(THREADS)
+float Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* local) {
+#pragma omp parallel for schedule(static) num_threads(THREADS)
   for (int t = 0; t < THREADS; t++) memset(&local[t], 0, sizeof(BatchGradients));
 
-#pragma omp parallel for schedule(auto) num_threads(THREADS)
+  float e = 0.0;
+
+#pragma omp parallel for schedule(static) num_threads(THREADS) reduction(+ : e)
   for (int n = 0; n < BATCH_SIZE; n++) {
     const int t = omp_get_thread_num();
 
@@ -139,6 +189,7 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     NNPredict(nn, f, board.stm, trace);
 
     float out = Sigmoid(trace->output);
+    e += Error(out, &board);
 
     // LOSS CALCULATIONS ------------------------------------------------------------------------
     float outputLoss = SigmoidPrime(out) * ErrorGradient(out, &board);
@@ -175,17 +226,5 @@ void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* loc
     // ------------------------------------------------------------------------------------------
   }
 
-#pragma omp parallel for schedule(auto) num_threads(4)
-  for (int i = 0; i < N_INPUT * N_HIDDEN; i++)
-    for (int t = 0; t < THREADS; t++) g->inputWeights[i].g += local[t].inputWeights[i];
-
-#pragma omp parallel for schedule(auto) num_threads(2)
-  for (int i = 0; i < N_HIDDEN; i++)
-    for (int t = 0; t < THREADS; t++) g->inputBiases[i].g += local[t].inputBiases[i];
-
-#pragma omp parallel for schedule(auto) num_threads(2)
-  for (int i = 0; i < N_HIDDEN * 2; i++)
-    for (int t = 0; t < THREADS; t++) g->outputWeights[i].g += local[t].outputWeights[i];
-
-  for (int t = 0; t < THREADS; t++) g->outputBias.g += local[t].outputBias;
+  return e / BATCH_SIZE;
 }

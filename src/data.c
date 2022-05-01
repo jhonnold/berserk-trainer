@@ -8,12 +8,70 @@
 #include "random.h"
 #include "util.h"
 
+void WriteToFile(char* dest, char* src) {
+  FILE* fp = fopen(src, "r");
+  if (fp == NULL) {
+    printf("Cannot open file: %s!\n", src);
+    exit(1);
+  }
+
+  FILE* fout = fopen(dest, "wb");
+  if (fout == NULL) {
+    printf("Cannot open file: %s!\n", dest);
+    exit(1);
+  }
+
+  uint64_t count = 0;
+  char line[128];
+
+  Board board[1];
+
+  while (fgets(line, 128, fp)) {
+    LoadDataEntry(line, board);
+    fwrite(board, sizeof(Board), 1, fout);
+
+    count++;
+
+    if (count % 1000000 == 0) printf("Wrote positions: [%10ld]\n", count);
+  }
+
+  fclose(fp);
+  fclose(fout);
+
+  printf("Wrote positions: [%10ld]\n", count);
+}
+
+void LoadEntriesBinary(char* path, DataSet* data, uint64_t n, uint64_t offset) {
+  FILE* fp = fopen(path, "rb");
+  if (fp == NULL) {
+    printf("Cannot open file: %s!\n", path);
+    exit(1);
+  }
+
+  if (data->entries == NULL) data->entries = malloc(sizeof(Board) * n);
+
+  fseek(fp, sizeof(Board) * offset, SEEK_SET);
+  
+  size_t x;
+  if ((x = fread(data->entries, sizeof(Board), n, fp)) != n) {
+    printf("Failed to read %ld files from %s with offset %ld - %ld\n", n, path, offset, x);
+    exit(1);
+  }
+
+  fclose(fp);
+
+  data->n = n;
+}
+
 void LoadEntries(char* path, DataSet* data, uint32_t n, uint32_t offset) {
   FILE* fp = fopen(path, "r");
   if (fp == NULL) {
     printf("Cannot open file: %s!\n", path);
     exit(1);
   }
+
+  data->n = 0;
+  if (data->entries == NULL) data->entries = malloc(sizeof(Board) * n);
 
   char in[128];
   uint32_t p = 0;

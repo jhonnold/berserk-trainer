@@ -8,8 +8,9 @@
 #define N_HIDDEN 512
 #define N_OUTPUT 1
 
-#define THREADS 12
+#define THREADS 8
 #define BATCH_SIZE 16384
+#define BATCHES_PER_LOAD 32768
 
 extern float ALPHA;
 #define BETA1 0.95
@@ -20,9 +21,6 @@ extern float ALPHA;
 #define EVAL 0.5
 
 #define LAMBDA (1.0 / (1024 * 1024))
-
-#define MAX_POSITIONS 1800000000
-#define VALIDATION_POSITIONS 15000000
 
 #define CRELU_MAX 256
 
@@ -64,7 +62,7 @@ typedef struct {
 } Features;
 
 typedef struct {
-  uint32_t n;
+  uint64_t n;
   Board* entries;
 } DataSet;
 
@@ -82,7 +80,7 @@ typedef struct {
 } ALIGN64 NetworkTrace;
 
 typedef struct {
-  float g, M, V;
+  float M, V;
 } Gradient;
 
 typedef struct {

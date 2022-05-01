@@ -5,7 +5,7 @@
 #include "util.h"
 
 float TotalError(DataSet* data, NN* nn);
-void Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* local);
+float Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* local);
 
 INLINE float Error(float r, Board* b) {
   return WDL * powf(fabs(r - b->wdl / 2.0), 2.5) +  //
