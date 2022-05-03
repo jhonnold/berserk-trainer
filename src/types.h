@@ -4,11 +4,11 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define N_INPUT 768
+#define N_INPUT 1536
 #define N_HIDDEN 512
 #define N_OUTPUT 1
 
-#define THREADS 6
+#define THREADS 8
 #define BATCH_SIZE 16384
 #define BATCHES_PER_LOAD 32768
 
@@ -99,8 +99,7 @@ typedef struct {
   float inputWeights[N_INPUT * N_HIDDEN];
 } BatchGradients;
 
-extern const Square psqt32[64];
-extern const Square psqt16[64];
+extern const Square psqt[];
 extern const Piece charToPiece[];
 extern const Piece opposite[];
 extern const int8_t scalar[];
