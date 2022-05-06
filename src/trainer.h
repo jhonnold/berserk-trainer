@@ -5,16 +5,16 @@
 #include "util.h"
 
 float TotalError(DataSet* data, NN* nn);
-float Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* local);
+float Train(int batch, DataSet* data, NN* nn, BatchGradients* local);
 
 INLINE float Error(float r, Board* b) {
-  return WDL * powf(fabs(r - b->wdl / 2.0), 2.5) +  //
-         EVAL * powf(fabs(r - b->eval), 2.5);
+  return WDL * powf(fabsf(r - b->wdl / 2.0f), 2.5f) +  //
+         EVAL * powf(fabsf(r - b->eval), 2.5f);
 }
 
 INLINE float ErrorGradient(float r, Board* b) {
-  return WDL * 2.5 * (r - b->wdl / 2.0) * sqrtf(fabs(r - b->wdl / 2.0)) +  //
-         EVAL * 2.5 * (r - b->eval) * sqrtf(fabs(r - b->eval));
+  return WDL * 2.5f* (r - b->wdl / 2.0f) * sqrtf(fabsf(r - b->wdl / 2.0f)) +  //
+         EVAL * 2.5f * (r - b->eval) * sqrtf(fabsf(r - b->eval));
 }
 
 #endif

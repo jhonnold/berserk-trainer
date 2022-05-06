@@ -109,7 +109,7 @@ void LoadDataEntry(char* buffer, Board* result) {
   // Invert for black to move
   if (result->stm == BLACK) {
     result->wdl = 2 - result->wdl;
-    result->eval = 1.0 - result->eval;
+    result->eval = 1.0f - result->eval;
   }
 }
 

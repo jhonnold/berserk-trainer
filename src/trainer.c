@@ -132,7 +132,7 @@ int main(int argc, char** argv) {
     }
 
     char buffer[64];
-    sprintf(buffer, "../nets/berserk-kq.e%d.2x%d.nn", epoch, N_HIDDEN);
+    sprintf(buffer, "../nets/berserk-kq.e%d.2x%d.%d.%d.nn", epoch, N_HIDDEN, N_HIDDEN_2, N_HIDDEN_3);
     SaveNN(nn, buffer);
 
     printf("Calculating Validation Error...\n");
@@ -145,14 +145,14 @@ int main(int argc, char** argv) {
     error = newError;
 
     // LR DROP
-    if (epoch == 20) ALPHA = 0.001;
+    if (epoch == 20) ALPHA = 0.001f;
 
-    if (epoch == 21) ALPHA = 0.0001;
+    if (epoch == 21) ALPHA = 0.0001f;
   }
 }
 
 float TotalError(DataSet* data, NN* nn) {
-  float e = 0.0;
+  float e = 0.0f;
 
 #pragma omp parallel for schedule(static) num_threads(THREADS) reduction(+ : e)
   for (uint32_t i = 0; i < data->n; i++) {
@@ -170,13 +170,13 @@ float TotalError(DataSet* data, NN* nn) {
   return e / data->n;
 }
 
-float Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* local) {
-#pragma omp parallel for schedule(static) num_threads(THREADS)
+float Train(int batch, DataSet* data, NN* nn, BatchGradients* local) {
+#pragma omp parallel for schedule(auto) num_threads(THREADS)
   for (int t = 0; t < THREADS; t++) memset(&local[t], 0, sizeof(BatchGradients));
 
   float e = 0.0;
 
-#pragma omp parallel for schedule(static) num_threads(THREADS) reduction(+ : e)
+#pragma omp parallel for schedule(auto) num_threads(THREADS) reduction(+ : e)
   for (int n = 0; n < BATCH_SIZE; n++) {
     const int t = omp_get_thread_num();
 
@@ -191,36 +191,57 @@ float Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* lo
     float out = Sigmoid(trace->output);
     e += Error(out, &board);
 
+    e += Error(out, &board);
+
     // LOSS CALCULATIONS ------------------------------------------------------------------------
     float outputLoss = SigmoidPrime(out) * ErrorGradient(out, &board);
 
-    float hiddenLosses[2 * N_HIDDEN];
+    float l2Losses[N_HIDDEN_3];
+    for (int i = 0; i < N_HIDDEN_3; i++)
+      l2Losses[i] = outputLoss * nn->outputWeights[i] * ReLUPrime(trace->l2Accumulator[i]);
+
+    float l1Losses[N_HIDDEN_2] = {0};
+    for (int i = 0; i < N_HIDDEN_2; i++)
+      for (int j = 0; j < N_HIDDEN_3; j++)
+        l1Losses[i] += l2Losses[j] * nn->l2Weights[j * N_HIDDEN_2 + i] * ReLUPrime(trace->l1Accumulator[i]);
+
+    float hiddenLosses[2 * N_HIDDEN] = {0};
     for (int i = 0; i < 2 * N_HIDDEN; i++)
-      hiddenLosses[i] = outputLoss * nn->outputWeights[i] * ReLUPrime(trace->accumulator[i]);
+      for (int j = 0; j < N_HIDDEN_2; j++)
+        hiddenLosses[i] += l1Losses[j] * nn->l1Weights[j * 2 * N_HIDDEN + i] * ReLUPrime(trace->accumulator[i]);
     // ------------------------------------------------------------------------------------------
 
     // OUTPUT LAYER GRADIENTS -------------------------------------------------------------------
     local[t].outputBias += outputLoss;
-    for (int i = 0; i < 2 * N_HIDDEN; i++) local[t].outputWeights[i] += trace->accumulator[i] * outputLoss;
+    for (int i = 0; i < N_HIDDEN_3; i++) local[t].outputWeights[i] += trace->l2Accumulator[i] * outputLoss;
+    // ------------------------------------------------------------------------------------------
+
+    // L2 LAYER GRADIENTS -------------------------------------------------------------------
+    for (int i = 0; i < N_HIDDEN_3; i++) local[t].l2Biases[i] += l2Losses[i];
+
+    for (int i = 0; i < N_HIDDEN_3; i++)
+      for (int j = 0; j < N_HIDDEN_2; j++)
+        local[t].l2Weights[i * N_HIDDEN_2 + j] += trace->l1Accumulator[j] * l2Losses[i];
+    // ------------------------------------------------------------------------------------------
+
+    // L1 LAYER GRADIENTS -------------------------------------------------------------------
+    for (int i = 0; i < N_HIDDEN_2; i++) local[t].l1Biases[i] += l1Losses[i];
+
+    for (int i = 0; i < N_HIDDEN_2; i++)
+      for (int j = 0; j < 2 * N_HIDDEN; j++)
+        local[t].l1Weights[i * 2 * N_HIDDEN + j] += trace->accumulator[j] * l1Losses[i];
     // ------------------------------------------------------------------------------------------
 
     // INPUT LAYER GRADIENTS --------------------------------------------------------------------
-    float lassos[2 * N_HIDDEN];
-    for (int i = 0; i < 2 * N_HIDDEN; i++) lassos[i] = LAMBDA * (trace->accumulator[i] > 0);
-
     float* stmLosses = hiddenLosses;
     float* xstmLosses = &hiddenLosses[N_HIDDEN];
 
-    float* stmLassos = lassos;
-    float* xstmLassos = &lassos[N_HIDDEN];
-
-    for (int i = 0; i < N_HIDDEN; i++)
-      local[t].inputBiases[i] += stmLosses[i] + xstmLosses[i] + stmLassos[i] + xstmLassos[i];
+    for (int i = 0; i < N_HIDDEN; i++) local[t].inputBiases[i] += stmLosses[i] + xstmLosses[i];
 
     for (int i = 0; i < f->n; i++) {
       for (int j = 0; j < N_HIDDEN; j++) {
-        local[t].inputWeights[f->features[i][board.stm] * N_HIDDEN + j] += stmLosses[j] + stmLassos[j];
-        local[t].inputWeights[f->features[i][board.stm ^ 1] * N_HIDDEN + j] += xstmLosses[j] + xstmLassos[j];
+        local[t].inputWeights[f->features[i][board.stm] * N_HIDDEN + j] += stmLosses[j];
+        local[t].inputWeights[f->features[i][board.stm ^ 1] * N_HIDDEN + j] += xstmLosses[j];
       }
     }
     // ------------------------------------------------------------------------------------------
