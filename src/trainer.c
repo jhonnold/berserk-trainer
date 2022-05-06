@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
   float error = TotalError(validation, nn);
   printf("Starting Error: [%1.8f]\n", error);
 
-  for (int epoch = 1; epoch <= 22; epoch++) {
+  for (int epoch = 1; epoch <= 15; epoch++) {
     long epochStart = GetTimeMS();
 
     int totalBatches = 1;
@@ -122,18 +122,20 @@ int main(int argc, char** argv) {
 
       int diskLoadBatches = data->n / BATCH_SIZE;
       for (int b = 0; b < diskLoadBatches; b++, totalBatches++) {
-        float be = Train(b, data, nn, gradients, local);
-        ApplyGradients(nn, gradients, local);
+        uint8_t active[N_INPUT] = {0};
+
+        float be = Train(b, data, nn, local, active);
+        ApplyGradients(nn, gradients, local, active);
 
         long now = GetTimeMS();
         printf("Batch: [#%d/%d], Error: [%1.8f], Speed: [%9.0f pos/s]\n", totalBatches, batches, be,
                1000.0 * totalBatches * BATCH_SIZE / (now - epochStart));
       }
-    }
 
-    char buffer[64];
-    sprintf(buffer, "../nets/berserk-kq.e%d.2x%d.nn", epoch, N_HIDDEN);
-    SaveNN(nn, buffer);
+      char buffer[64];
+      sprintf(buffer, "../nets/berserk-hka_v2_hm.e%d_%d.2x%d.nn", epoch, d, N_HIDDEN);
+      SaveNN(nn, buffer);
+    }
 
     printf("Calculating Validation Error...\n");
     float newError = TotalError(validation, nn);
@@ -145,9 +147,9 @@ int main(int argc, char** argv) {
     error = newError;
 
     // LR DROP
-    if (epoch == 20) ALPHA = 0.001;
+    if (epoch == 13) ALPHA = 0.001;
 
-    if (epoch == 21) ALPHA = 0.0001;
+    if (epoch == 14) ALPHA = 0.0001;
   }
 }
 
@@ -170,10 +172,11 @@ float TotalError(DataSet* data, NN* nn) {
   return e / data->n;
 }
 
-float Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* local) {
+float Train(int batch, DataSet* data, NN* nn, BatchGradients* local, uint8_t* active) {
 #pragma omp parallel for schedule(static) num_threads(THREADS)
   for (int t = 0; t < THREADS; t++) memset(&local[t], 0, sizeof(BatchGradients));
 
+  uint8_t actives[THREADS][N_INPUT] = {0};
   float e = 0.0;
 
 #pragma omp parallel for schedule(static) num_threads(THREADS) reduction(+ : e)
@@ -218,6 +221,8 @@ float Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* lo
       local[t].inputBiases[i] += stmLosses[i] + xstmLosses[i] + stmLassos[i] + xstmLassos[i];
 
     for (int i = 0; i < f->n; i++) {
+      actives[t][f->features[i][board.stm]] = actives[t][f->features[i][board.stm ^ 1]] = 1;
+
       for (int j = 0; j < N_HIDDEN; j++) {
         local[t].inputWeights[f->features[i][board.stm] * N_HIDDEN + j] += stmLosses[j] + stmLassos[j];
         local[t].inputWeights[f->features[i][board.stm ^ 1] * N_HIDDEN + j] += xstmLosses[j] + xstmLassos[j];
@@ -225,6 +230,9 @@ float Train(int batch, DataSet* data, NN* nn, NNGradients* g, BatchGradients* lo
     }
     // ------------------------------------------------------------------------------------------
   }
+
+  for (int t = 0; t < THREADS; t++)
+    for (int i = 0; i < N_INPUT; i++) active[i] |= actives[t][i];
 
   return e / BATCH_SIZE;
 }

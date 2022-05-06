@@ -4,11 +4,13 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define N_INPUT 1536
+#define N_INPUT 22528
 #define N_HIDDEN 512
 #define N_OUTPUT 1
 
-#define THREADS 4
+#define THREADS 8
+
+// total fens in berserk9dev2_2.d9.bin - 3264074531
 #define BATCH_SIZE 16384
 #define BATCHES_PER_LOAD 32768
 
@@ -99,10 +101,8 @@ typedef struct {
   float inputWeights[N_INPUT * N_HIDDEN];
 } BatchGradients;
 
-extern const Square psqt[];
-extern const Piece charToPiece[];
-extern const Piece opposite[];
-extern const int8_t scalar[];
+extern const int8_t KING_BUCKETS[64];
+extern const Piece CHAR_TO_PIECE[];
 extern const float SS;
 
 #endif

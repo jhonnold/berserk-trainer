@@ -4,17 +4,19 @@
 #include "types.h"
 #include "util.h"
 
-INLINE Square mirror(Square s) { return s ^ 56; }
-
-INLINE int8_t kIdx(Square k, Square s) { return 2 * ((k & 4) == (s & 4)) + ((k & 32) == (s & 32)); }
-
-INLINE Piece inv(Piece p) { return opposite[p]; }
+INLINE Square orient(Square s, Square king, const Color view) { return (7 * !(king & 4)) ^ (56 * view) ^ s; }
 
 INLINE Feature idx(Piece pc, Square sq, Square king, const Color view) {
-  if (view == WHITE)
-    return pc * 128 + kIdx(king, sq) * 32 + psqt[mirror(sq)];
-  else
-    return inv(pc) * 128 + kIdx(king, sq) * 32 + psqt[sq];
+  int pieceColor = pc < BLACK_PAWN ? WHITE : BLACK;
+  int pieceType = pc % 6;
+  int pieceIdx = min(10, pieceType * 2 + (pieceColor != view));
+
+  int kingSq = orient(king, king, view);
+  int pieceSq = orient(sq, king, view);
+
+  return KING_BUCKETS[kingSq] * 11 * 64  //
+         + pieceIdx * 64                 //
+         + pieceSq;
 }
 
 INLINE Piece getPiece(uint8_t pieces[16], int n) { return (pieces[n / 2] >> ((n & 1) * 4)) & 0xF; }
