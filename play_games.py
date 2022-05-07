@@ -58,7 +58,7 @@ def run_match(best, root_dir, c_chess_exe, concurrency, book_file_name, berserk_
     command = command + " -engine cmd={} name=master".format(berserk_base)
     for net in best:
         command = command + " -engine cmd={} name={} option.EvalFile={}".format(
-            berserk_test, net.replace(root_dir, '')[1:], os.path.join(os.getcwd(), net)
+            berserk_test, net, os.path.join(os.getcwd(), net)
         )
     command = command + " -pgn {} 0 2>&1".format(
         pgn_file_name
@@ -185,13 +185,13 @@ def main():
     parser.add_argument(
         "--ordo_exe",
         type=str,
-        default="./ordo",
+        default="./Ordo/ordo",
         help="Path to ordo, see https://github.com/michiguel/Ordo",
     )
     parser.add_argument(
         "--c_chess_exe",
         type=str,
-        default="./c-chess-cli",
+        default="./c-chess-cli/c-chess-cli",
         help="Path to c-chess-cli, see https://github.com/lucasart/c-chess-cli",
     )
     parser.add_argument(
@@ -208,7 +208,7 @@ def main():
     parser.add_argument(
         "--book_file_name",
         type=str,
-        default="./noob_3moves.epd",
+        default="./4moves_noob.epd",
         help="Path to a suitable book, see https://github.com/official-stockfish/books",
     )
     args = parser.parse_args()
