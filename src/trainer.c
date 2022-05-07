@@ -208,24 +208,17 @@ float Train(int batch, DataSet* data, NN* nn, BatchGradients* local, uint8_t* ac
     // ------------------------------------------------------------------------------------------
 
     // INPUT LAYER GRADIENTS --------------------------------------------------------------------
-    float lassos[2 * N_HIDDEN];
-    for (int i = 0; i < 2 * N_HIDDEN; i++) lassos[i] = LAMBDA * (trace->accumulator[i] > 0);
-
     float* stmLosses = hiddenLosses;
     float* xstmLosses = &hiddenLosses[N_HIDDEN];
 
-    float* stmLassos = lassos;
-    float* xstmLassos = &lassos[N_HIDDEN];
-
-    for (int i = 0; i < N_HIDDEN; i++)
-      local[t].inputBiases[i] += stmLosses[i] + xstmLosses[i] + stmLassos[i] + xstmLassos[i];
+    for (int i = 0; i < N_HIDDEN; i++) local[t].inputBiases[i] += stmLosses[i] + xstmLosses[i];
 
     for (int i = 0; i < f->n; i++) {
       actives[t][f->features[i][board.stm]] = actives[t][f->features[i][board.stm ^ 1]] = 1;
 
       for (int j = 0; j < N_HIDDEN; j++) {
-        local[t].inputWeights[f->features[i][board.stm] * N_HIDDEN + j] += stmLosses[j] + stmLassos[j];
-        local[t].inputWeights[f->features[i][board.stm ^ 1] * N_HIDDEN + j] += xstmLosses[j] + xstmLassos[j];
+        local[t].inputWeights[f->features[i][board.stm] * N_HIDDEN + j] += stmLosses[j];
+        local[t].inputWeights[f->features[i][board.stm ^ 1] * N_HIDDEN + j] += xstmLosses[j];
       }
     }
     // ------------------------------------------------------------------------------------------

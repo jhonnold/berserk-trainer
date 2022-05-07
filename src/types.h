@@ -22,8 +22,6 @@ extern float ALPHA;
 #define WDL 0.5
 #define EVAL 0.5
 
-#define LAMBDA (1.0 / (1024 * 1024))
-
 #define CRELU_MAX 256
 
 #define ALIGN64 __attribute__((aligned(64)))
