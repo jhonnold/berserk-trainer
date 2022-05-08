@@ -40,7 +40,7 @@ void ApplyGradients(NN* nn, NNGradients* grads, BatchGradients* local, uint8_t* 
   }
 
 #pragma omp parallel for schedule(static) num_threads(THREADS)
-  for (int i = 0; i < N_HIDDEN * 2; i++) {
+  for (int i = 0; i < N_L1; i++) {
     float g = 0.0;
     for (int t = 0; t < THREADS; t++) g += local[t].outputWeights[i];
 

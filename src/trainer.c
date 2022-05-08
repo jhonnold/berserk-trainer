@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
       }
 
       char buffer[64];
-      sprintf(buffer, "../nets/berserk-hka_v2_hm.e%d_%d.2x%d.nn", epoch, d, N_HIDDEN);
+      sprintf(buffer, "../nets/berserk-kq2.e%d_%d.2x%d.nn", epoch, d, N_HIDDEN);
       SaveNN(nn, buffer);
     }
 
@@ -197,14 +197,14 @@ float Train(int batch, DataSet* data, NN* nn, BatchGradients* local, uint8_t* ac
     // LOSS CALCULATIONS ------------------------------------------------------------------------
     float outputLoss = SigmoidPrime(out) * ErrorGradient(out, &board);
 
-    float hiddenLosses[2 * N_HIDDEN];
-    for (int i = 0; i < 2 * N_HIDDEN; i++)
+    float hiddenLosses[N_L1];
+    for (int i = 0; i < N_L1; i++)
       hiddenLosses[i] = outputLoss * nn->outputWeights[i] * ReLUPrime(trace->accumulator[i]);
     // ------------------------------------------------------------------------------------------
 
     // OUTPUT LAYER GRADIENTS -------------------------------------------------------------------
     local[t].outputBias += outputLoss;
-    for (int i = 0; i < 2 * N_HIDDEN; i++) local[t].outputWeights[i] += trace->accumulator[i] * outputLoss;
+    for (int i = 0; i < N_L1; i++) local[t].outputWeights[i] += trace->accumulator[i] * outputLoss;
     // ------------------------------------------------------------------------------------------
 
     // INPUT LAYER GRADIENTS --------------------------------------------------------------------

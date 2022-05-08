@@ -4,8 +4,9 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define N_INPUT 22528
+#define N_INPUT (2 * 12 * 64)
 #define N_HIDDEN 512
+#define N_L1 (2 * N_HIDDEN)
 #define N_OUTPUT 1
 
 #define THREADS 8
@@ -68,7 +69,7 @@ typedef struct {
 
 typedef struct {
   float outputBias;
-  float outputWeights[2 * N_HIDDEN] ALIGN64;
+  float outputWeights[N_L1] ALIGN64;
 
   float inputBiases[N_HIDDEN] ALIGN64;
   float inputWeights[N_INPUT * N_HIDDEN] ALIGN64;
@@ -76,7 +77,7 @@ typedef struct {
 
 typedef struct {
   float output;
-  float accumulator[2 * N_HIDDEN] ALIGN64;
+  float accumulator[N_L1] ALIGN64;
 } ALIGN64 NetworkTrace;
 
 typedef struct {
@@ -85,7 +86,7 @@ typedef struct {
 
 typedef struct {
   Gradient outputBias;
-  Gradient outputWeights[2 * N_HIDDEN];
+  Gradient outputWeights[N_L1];
 
   Gradient inputBiases[N_HIDDEN];
   Gradient inputWeights[N_INPUT * N_HIDDEN];
@@ -93,7 +94,7 @@ typedef struct {
 
 typedef struct {
   float outputBias;
-  float outputWeights[2 * N_HIDDEN];
+  float outputWeights[N_L1];
 
   float inputBiases[N_HIDDEN];
   float inputWeights[N_INPUT * N_HIDDEN];
