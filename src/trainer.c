@@ -14,6 +14,9 @@
 #include "util.h"
 
 int main(int argc, char** argv) {
+  setbuf(stdin, NULL);
+  setbuf(stdout, NULL);
+
   SeedRandom();
 
   uint8_t binaryRead = 0;
@@ -102,54 +105,46 @@ int main(int argc, char** argv) {
   float error = TotalError(validation, nn);
   printf("Starting Error: [%1.8f]\n", error);
 
-  for (int epoch = 1; epoch <= 15; epoch++) {
+  int batchesPerDataset = entries / BATCH_SIZE;
+  int diskLoads = floor((double)batchesPerDataset / BATCHES_PER_LOAD);
+
+  int epoch = 0;
+  while (++epoch <= 400) {
     long epochStart = GetTimeMS();
 
-    int totalBatches = 1;
-    int batches = entries / BATCH_SIZE;
-    int diskLoads = ceilf((double)batches / BATCHES_PER_LOAD);
+    int d = epoch % diskLoads;
+    if (binaryRead)
+      LoadEntriesBinary(samplesPath, data, BATCH_SIZE * BATCHES_PER_LOAD, d * BATCH_SIZE * BATCHES_PER_LOAD);
+    else
+      LoadEntries(samplesPath, data, BATCH_SIZE * BATCHES_PER_LOAD, d * BATCH_SIZE * BATCHES_PER_LOAD);
 
-    for (int d = 0; d < diskLoads; d++) {
-      int loadCount = min(BATCH_SIZE * BATCHES_PER_LOAD, entries - d * (BATCH_SIZE * BATCHES_PER_LOAD));
+    printf("\rShuffling...");
+    ShuffleData(data);
 
-      if (binaryRead)
-        LoadEntriesBinary(samplesPath, data, loadCount, d * loadCount);
-      else
-        LoadEntries(samplesPath, data, loadCount, d * loadCount);
+    for (int b = 0; b < BATCHES_PER_LOAD; b++) {
+      uint8_t active[N_INPUT] = {0};
 
-      printf("Shuffling...\n");
-      ShuffleData(data);
+      float be = Train(b, data, nn, local, active);
+      ApplyGradients(nn, gradients, local, active);
 
-      int diskLoadBatches = data->n / BATCH_SIZE;
-      for (int b = 0; b < diskLoadBatches; b++, totalBatches++) {
-        uint8_t active[N_INPUT] = {0};
-
-        float be = Train(b, data, nn, local, active);
-        ApplyGradients(nn, gradients, local, active);
-
-        long now = GetTimeMS();
-        printf("Batch: [#%d/%d], Error: [%1.8f], Speed: [%9.0f pos/s]\n", totalBatches, batches, be,
-               1000.0 * totalBatches * BATCH_SIZE / (now - epochStart));
-      }
-
-      char buffer[64];
-      sprintf(buffer, "../nets/berserk-kq2.e%d_%d.2x%d.nn", epoch, d, N_HIDDEN);
-      SaveNN(nn, buffer);
+      long now = GetTimeMS();
+      printf("\rBatch: [#%d/%d], Error: [%1.8f], Speed: [%9.0f pos/s]", b + 1, BATCHES_PER_LOAD, be,
+             1000.0 * (b + 1) * BATCH_SIZE / (now - epochStart));
     }
 
-    printf("Calculating Validation Error...\n");
+    char buffer[64];
+    sprintf(buffer, "../nets/berserk-kq2.e%d.2x%d.nn", epoch, N_HIDDEN);
+    SaveNN(nn, buffer);
+
     float newError = TotalError(validation, nn);
 
     long now = GetTimeMS();
-    printf("Epoch: [#%5d], Error: [%1.8f], Delta: [%+1.8f], LR: [%.5f], Time: [%lds]\n", epoch, newError,
-           error - newError, ALPHA, (now - epochStart) / 1000);
+    printf("\rEpoch: [#%5d], Error: [%1.8f], Delta: [%+1.8f], LR: [%.5f], Time: [%lds], Speed: [%9.0f pos/s]\n", epoch,
+           newError, error - newError, ALPHA, (now - epochStart) / 1000,
+           1000.0 * BATCHES_PER_LOAD * BATCH_SIZE / (now - epochStart));
 
     error = newError;
-
-    // LR DROP
-    if (epoch == 13) ALPHA = 0.001;
-
-    if (epoch == 14) ALPHA = 0.0001;
+    ALPHA *= GAMMA;
   }
 }
 

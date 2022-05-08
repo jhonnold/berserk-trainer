@@ -1,6 +1,6 @@
 #include "types.h"
 
-float ALPHA = 0.01f;
+float ALPHA = 0.00875f;
 
 const float SS = 3.68415f / 512;
 

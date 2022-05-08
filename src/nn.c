@@ -100,6 +100,4 @@ void SaveNN(NN* nn, char* path) {
   fwrite(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
 
   fclose(fp);
-
-  printf("Saved network to %s!\n", path);
 }

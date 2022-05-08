@@ -72,7 +72,7 @@ def run_match(best, root_dir, c_chess_exe, concurrency, book_file_name, berserk_
         line = line.decode('utf-8')
         c_chess_out.write(line)
         if 'Score' in line:
-            epoch_num = re.search(r'\.e(\d+_\d+)\.', line)
+            epoch_num = re.search(r'\.e(\d+)\.', line)
             if epoch_num.group(1) not in seen:
                 sys.stdout.write('\n')
             seen[epoch_num.group(1)] = True
