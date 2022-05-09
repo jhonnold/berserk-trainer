@@ -4,19 +4,18 @@
 #include "types.h"
 #include "util.h"
 
-INLINE Square orient(Square s, Square king, const Color view) { return (7 * !(king & 4)) ^ (56 * view) ^ s; }
+INLINE int8_t KingIndex(Square k, Square s) { return 2 * ((k & 4) == (s & 4)) + ((k & 32) == (s & 32)); }
+
+INLINE Piece Invert(Piece p) { return OPPOSITE[p]; }
 
 INLINE Feature idx(Piece pc, Square sq, Square king, const Color view) {
-  int pieceColor = pc < BLACK_PAWN ? WHITE : BLACK;
-  int pieceType = pc % 6;
-  int pieceIdx = pieceType * 2 + (pieceColor != view);
+  int pieceIdx = view == WHITE ? pc : Invert(pc);
+  int kingIdx = KingIndex(king, sq);
+  int sqIdx = PSQT64_TO_32[((view == WHITE) * 56) ^ sq];
 
-  int kingSq = orient(king, king, view);
-  int pieceSq = orient(sq, king, view);
-
-  return KING_BUCKETS[kingSq] * 12 * 64  //
-         + pieceIdx * 64                 //
-         + pieceSq;
+  return pieceIdx * 4 * 32 //
+      + kingIdx * 32
+      + sqIdx;
 }
 
 INLINE Piece getPiece(uint8_t pieces[16], int n) { return (pieces[n / 2] >> ((n & 1) * 4)) & 0xF; }

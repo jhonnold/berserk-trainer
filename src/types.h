@@ -4,7 +4,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define N_INPUT (2 * 12 * 64)
+#define N_INPUT (12 * 4 * 32)
 #define N_HIDDEN 512
 #define N_L1 (2 * N_HIDDEN)
 #define N_OUTPUT 1
@@ -101,7 +101,8 @@ typedef struct {
   float inputWeights[N_INPUT * N_HIDDEN];
 } BatchGradients;
 
-extern const int8_t KING_BUCKETS[64];
+extern const Piece OPPOSITE[12];
+extern const Square PSQT64_TO_32[64];
 extern const Piece CHAR_TO_PIECE[];
 extern const float SS;
 
