@@ -10,22 +10,14 @@ void UpdateAndApplyGradientWithAge(float* v, Gradient* grad, float g, int age) {
   grad->M = powf(BETA1, age) * grad->M + (1.0 - BETA1) * g;
   grad->V = powf(BETA2, age) * grad->V + (1.0 - BETA2) * g * g;
 
-  float mHat = grad->M / (1 - powf(BETA1, ITERATION));
-  float vHat = grad->V / (1 - powf(BETA2, ITERATION));
-  float delta = ALPHA * mHat / (sqrtf(vHat) + EPSILON);
-
-  *v -= delta;
+  *v -= ALPHA * grad->M / (sqrtf(grad->V) + EPSILON);
 }
 
 void UpdateAndApplyGradient(float* v, Gradient* grad, float g) {
   grad->M = BETA1 * grad->M + (1.0 - BETA1) * g;
   grad->V = BETA2 * grad->V + (1.0 - BETA2) * g * g;
 
-  float mHat = grad->M / (1 - powf(BETA1, ITERATION));
-  float vHat = grad->V / (1 - powf(BETA2, ITERATION));
-  float delta = ALPHA * mHat / (sqrtf(vHat) + EPSILON);
-
-  *v -= delta;
+  *v -= ALPHA * grad->M / (sqrtf(grad->V) + EPSILON);
 }
 
 void ApplyGradients(NN* nn, NNGradients* grads, BatchGradients* local, uint8_t* active) {
