@@ -123,6 +123,7 @@ int main(int argc, char** argv) {
 
     for (int b = 0; b < BATCHES_PER_LOAD; b++) {
       uint8_t active[N_INPUT] = {0};
+      ITERATION++;
 
       float be = Train(b, data, nn, local, active);
       ApplyGradients(nn, gradients, local, active);
@@ -139,17 +140,12 @@ int main(int argc, char** argv) {
     float newError = TotalError(validation, nn);
 
     long now = GetTimeMS();
-    printf("\rEpoch: [#%5d], Error: [%1.8f], Delta: [%+1.8f], LR: [%.5f], Time: [%lds], Speed: [%9.0f pos/s]\n", epoch,
+    printf("\rEpoch: [#%5d], Error: [%1.8f], Delta: [%+1.8f], LR: [%.8f], Time: [%lds], Speed: [%9.0f pos/s]\n", epoch,
            newError, error - newError, ALPHA, (now - epochStart) / 1000,
            1000.0 * BATCHES_PER_LOAD * BATCH_SIZE / (now - epochStart));
 
     error = newError;
-
-    if (epoch == 300)
-      ALPHA = 0.001f;
-
-    if (epoch == 350)
-      ALPHA = 0.0001f;
+    ALPHA *= GAMMA;
   }
 }
 

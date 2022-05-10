@@ -1,6 +1,9 @@
 #include "types.h"
 
-float ALPHA = 0.01f;
+int ITERATION = 0;
+int LAST_SEEN[N_INPUT] = {0};
+
+float ALPHA = 0.000875f;
 
 const float SS = 3.68415f / 512;
 

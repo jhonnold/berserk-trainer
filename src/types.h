@@ -16,9 +16,10 @@
 #define BATCHES_PER_LOAD 6100
 
 extern float ALPHA;
-#define BETA1 0.95
+#define BETA1 0.9
 #define BETA2 0.999
 #define EPSILON 1e-8
+#define GAMMA 0.992f
 
 #define WDL 0.5
 #define EVAL 0.5
@@ -100,6 +101,8 @@ typedef struct {
   float inputWeights[N_INPUT * N_HIDDEN];
 } BatchGradients;
 
+extern int ITERATION;
+extern int LAST_SEEN[N_INPUT];
 extern const Piece OPPOSITE[12];
 extern const Square PSQT64_TO_32[64];
 extern const Piece CHAR_TO_PIECE[];
