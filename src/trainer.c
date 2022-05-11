@@ -145,7 +145,9 @@ int main(int argc, char** argv) {
            1000.0 * BATCHES_PER_LOAD * BATCH_SIZE / (now - epochStart));
 
     error = newError;
-    ALPHA *= GAMMA;
+
+    if (epoch == 250 || epoch == 325)
+      ALPHA /= 10.0f;
   }
 }
 
