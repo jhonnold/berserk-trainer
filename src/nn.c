@@ -102,7 +102,8 @@ NN* LoadRandomNN() {
       else if (i == 4)
         v = 1250.0f;
 
-      nn->psqtWeights[whiteIdx] = nn->psqtWeights[blackIdx] = v;
+      nn->psqtWeights[whiteIdx] = v; 
+      nn->psqtWeights[blackIdx] = -v;
     }
   }
 
