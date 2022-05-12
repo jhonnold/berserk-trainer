@@ -9,16 +9,16 @@
 #define N_L1 (2 * N_HIDDEN)
 #define N_OUTPUT 1
 
-#define THREADS 8
+#define THREADS 4
 
 // total fens in berserk9dev2_2.d9.bin - 3264074531
 #define BATCH_SIZE 16384
-#define BATCHES_PER_LOAD 6100
+#define BATCHES_PER_LOAD 250
 
 extern float ALPHA;
-#define BETA1 0.95
+#define BETA1 0.9
 #define BETA2 0.999
-#define EPSILON 1e-8
+#define EPSILON 1e-7
 #define GAMMA 0.992f
 
 #define WDL 0.5

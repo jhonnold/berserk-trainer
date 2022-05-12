@@ -3,7 +3,7 @@
 int ITERATION = 0;
 int LAST_SEEN[N_INPUT] = {0};
 
-float ALPHA = 0.01f;
+float ALPHA = 0.001f;
 
 const float SS = 3.68415f / 512;
 

@@ -6,35 +6,26 @@
 #include "types.h"
 #include "util.h"
 
-void UpdateAndApplyGradientWithAge(float* v, Gradient* grad, float g, int age) {
-  grad->M = powf(BETA1, age) * grad->M + (1.0 - BETA1) * g;
-  grad->V = powf(BETA2, age) * grad->V + (1.0 - BETA2) * g * g;
-
-  *v -= ALPHA * grad->M / (sqrtf(grad->V) + EPSILON);
-}
-
 void UpdateAndApplyGradient(float* v, Gradient* grad, float g) {
   grad->M = BETA1 * grad->M + (1.0 - BETA1) * g;
   grad->V = BETA2 * grad->V + (1.0 - BETA2) * g * g;
 
-  *v -= ALPHA * grad->M / (sqrtf(grad->V) + EPSILON);
+  float mHat = grad->M / (1 - powf(BETA1, ITERATION));
+  float vHat = grad->V / (1 - powf(BETA2, ITERATION));
+
+  *v -= ALPHA * mHat / (sqrtf(vHat) + EPSILON);
 }
 
-void ApplyGradients(NN* nn, NNGradients* grads, BatchGradients* local, uint8_t* active) {
+void ApplyGradients(NN* nn, NNGradients* grads, BatchGradients* local) {
 #pragma omp parallel for schedule(static) num_threads(THREADS)
   for (int i = 0; i < N_INPUT; i++) {
-    if (!active[i]) continue;
-
-    int age = ITERATION - LAST_SEEN[i];
-    LAST_SEEN[i] = ITERATION;
-
     for (int j = 0; j < N_HIDDEN; j++) {
       int idx = i * N_HIDDEN + j;
 
       float g = 0.0;
       for (int t = 0; t < THREADS; t++) g += local[t].inputWeights[idx];
 
-      UpdateAndApplyGradientWithAge(&nn->inputWeights[idx], &grads->inputWeights[idx], g, age);
+      UpdateAndApplyGradient(&nn->inputWeights[idx], &grads->inputWeights[idx], g);
     }
   }
 
