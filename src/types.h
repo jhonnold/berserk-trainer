@@ -21,8 +21,8 @@ extern float ALPHA;
 #define EPSILON 1e-8
 #define GAMMA 0.992f
 
-#define WDL 0.5
-#define EVAL 0.5
+#define EVAL 0.9
+#define WDL (1.0 - EVAL)
 
 #define LAMBDA (1.0 / (1024 * 1024))
 
