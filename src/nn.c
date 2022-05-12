@@ -17,6 +17,8 @@ const int NETWORK_MAGIC = 'B' | 'R' << 8 | 'K' << 16 | 'R' << 24;
 void NNPredict(NN* nn, Features* f, Color stm, NetworkTrace* trace) {
   trace->output = nn->outputBias;
 
+  float psqt = 0.0f;
+
   // Apply first layer
   float* stmAccumulator = trace->accumulator;
   float* xstmAccumulator = &trace->accumulator[N_HIDDEN];
@@ -29,11 +31,14 @@ void NNPredict(NN* nn, Features* f, Color stm, NetworkTrace* trace) {
       stmAccumulator[j] += nn->inputWeights[f->features[i][stm] * N_HIDDEN + j];
       xstmAccumulator[j] += nn->inputWeights[f->features[i][stm ^ 1] * N_HIDDEN + j];
     }
+
+    psqt += (nn->psqtWeights[f->features[i][stm]] - nn->psqtWeights[f->features[i][stm ^ 1]]) / 2;
   }
 
   ReLU(trace->accumulator, N_L1);
 
   trace->output += DotProduct(trace->accumulator, nn->outputWeights, N_L1);
+  trace->output += psqt;
 }
 
 NN* LoadNN(char* path) {
@@ -61,6 +66,7 @@ NN* LoadNN(char* path) {
   fread(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
   fread(nn->outputWeights, sizeof(float), N_L1, fp);
   fread(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
+  fread(nn->psqtWeights, sizeof(float), N_INPUT, fp);
 
   fclose(fp);
 
@@ -78,6 +84,27 @@ NN* LoadRandomNN() {
   for (int i = 0; i < N_L1; i++) nn->outputWeights[i] = RandomGaussian(0, sqrt(1.0 / N_HIDDEN));
 
   nn->outputBias = 0;
+
+  for (int i = 0; i < 5; i++) {
+    for (int j = 0; j < 128; j++) {
+      int whiteIdx = i * 128 + j;
+      int blackIdx = whiteIdx + 768;
+
+      float v;
+      if (i == 0)
+        v = 60.0f;
+      else if (i == 1)
+        v = 375.0f;
+      else if (i == 2)
+        v = 400.0f;
+      else if (i == 3)
+        v = 625.0f;
+      else if (i == 4)
+        v = 1250.0f;
+
+      nn->psqtWeights[whiteIdx] = nn->psqtWeights[blackIdx] = v;
+    }
+  }
 
   return nn;
 }
@@ -98,6 +125,7 @@ void SaveNN(NN* nn, char* path) {
   fwrite(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
   fwrite(nn->outputWeights, sizeof(float), N_L1, fp);
   fwrite(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
+  fwrite(nn->psqtWeights, sizeof(float), N_INPUT, fp);
 
   fclose(fp);
 }

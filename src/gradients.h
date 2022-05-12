@@ -36,6 +36,10 @@ void ApplyGradients(NN* nn, NNGradients* grads, BatchGradients* local, uint8_t* 
 
       UpdateAndApplyGradientWithAge(&nn->inputWeights[idx], &grads->inputWeights[idx], g, age);
     }
+
+    float g = 0.0;
+    for (int t = 0; t < THREADS; t++) g += local[t].psqtWeights[i];
+    UpdateAndApplyGradientWithAge(&nn->psqtWeights[i], &grads->psqtWeights[i], g, age);
   }
 
 #pragma omp parallel for schedule(static) num_threads(THREADS)
@@ -66,6 +70,8 @@ void ClearGradients(NNGradients* gradients) {
 
   memset(gradients->outputWeights, 0, sizeof(gradients->outputWeights));
   memset(&gradients->outputBias, 0, sizeof(gradients->outputBias));
+
+  memset(gradients->psqtWeights, 0, sizeof(gradients->psqtWeights));
 }
 
 #endif

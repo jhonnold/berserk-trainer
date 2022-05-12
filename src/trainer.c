@@ -228,6 +228,9 @@ float Train(int batch, DataSet* data, NN* nn, BatchGradients* local, uint8_t* ac
         local[t].inputWeights[f1 * N_HIDDEN + j] += stmLosses[j] + stmLassos[j];
         local[t].inputWeights[f2 * N_HIDDEN + j] += xstmLosses[j] + xstmLassos[j];
       }
+
+      local[t].psqtWeights[f1] += outputLoss / 2;
+      local[t].psqtWeights[f2] -= outputLoss / 2;
     }
     // ------------------------------------------------------------------------------------------
   }

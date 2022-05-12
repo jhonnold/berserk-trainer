@@ -76,6 +76,8 @@ typedef struct {
 
   float inputBiases[N_HIDDEN] ALIGN64;
   float inputWeights[N_INPUT * N_HIDDEN] ALIGN64;
+
+  float psqtWeights[N_INPUT] ALIGN64;
 } NN;
 
 typedef struct {
@@ -93,6 +95,8 @@ typedef struct {
 
   Gradient inputBiases[N_HIDDEN];
   Gradient inputWeights[N_INPUT * N_HIDDEN];
+
+  Gradient psqtWeights[N_INPUT];
 } NNGradients;
 
 typedef struct {
@@ -101,6 +105,8 @@ typedef struct {
 
   float inputBiases[N_HIDDEN];
   float inputWeights[N_INPUT * N_HIDDEN];
+
+  float psqtWeights[N_INPUT];
 } BatchGradients;
 
 extern int ITERATION;
