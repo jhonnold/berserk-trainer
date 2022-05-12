@@ -19,7 +19,7 @@ extern float ALPHA;
 #define BETA1 0.9
 #define BETA2 0.999
 #define EPSILON 1e-7
-#define GAMMA 0.992f
+#define GAMMA 0.987f
 
 #define WDL 0.5
 #define EVAL 0.5
