@@ -52,6 +52,7 @@ Mkfile.old
 dkms.conf
 
 berserk
+trainer
 .vscode
 dist
 

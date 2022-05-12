@@ -37,7 +37,7 @@ void ParseFen(char* fen, Board* board) {
   for (Square sq = 0; sq < 64; sq++) {
     char c = *fen;
     if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
-      Piece pc = charToPiece[(int)*fen];
+      Piece pc = CHAR_TO_PIECE[(int)*fen];
 
       if (c == 'K')
         board->kings[WHITE] = sq;

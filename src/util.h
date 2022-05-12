@@ -8,6 +8,7 @@
 
 #define INLINE static inline __attribute__((always_inline))
 #define H(h, v) ((h) + (324723947ULL + (v))) ^ 93485734985ULL
+#define min(a, b) ((a) < (b) ? (a) : (b))
 
 long GetTimeMS();
 
@@ -26,7 +27,7 @@ INLINE uint64_t NetworkHash(NN* nn) {
 
   for (int i = 0; i < N_HIDDEN; i++) hash = H(hash, (int)nn->inputBiases[i]);
 
-  for (int i = 0; i < N_HIDDEN * 2; i++) hash = H(hash, (int)nn->outputWeights[i]);
+  for (int i = 0; i < N_L1; i++) hash = H(hash, (int)nn->outputWeights[i]);
 
   hash = H(hash, (int)nn->outputBias);
 

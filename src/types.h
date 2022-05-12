@@ -4,25 +4,27 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define N_INPUT 1536
+#define N_INPUT (12 * 4 * 32)
 #define N_HIDDEN 512
+#define N_L1 (2 * N_HIDDEN)
 #define N_OUTPUT 1
 
-#define THREADS 12
+#define THREADS 8
+
+// total fens in berserk9dev2_2.d9.bin - 3264074531
 #define BATCH_SIZE 16384
+#define BATCHES_PER_LOAD 6100
 
 extern float ALPHA;
 #define BETA1 0.95
 #define BETA2 0.999
 #define EPSILON 1e-8
+#define GAMMA 0.992f
 
 #define WDL 0.5
 #define EVAL 0.5
 
 #define LAMBDA (1.0 / (1024 * 1024))
-
-#define MAX_POSITIONS 1800000000
-#define VALIDATION_POSITIONS 15000000
 
 #define CRELU_MAX 256
 
@@ -64,13 +66,13 @@ typedef struct {
 } Features;
 
 typedef struct {
-  uint32_t n;
+  uint64_t n;
   Board* entries;
 } DataSet;
 
 typedef struct {
   float outputBias;
-  float outputWeights[2 * N_HIDDEN] ALIGN64;
+  float outputWeights[N_L1] ALIGN64;
 
   float inputBiases[N_HIDDEN] ALIGN64;
   float inputWeights[N_INPUT * N_HIDDEN] ALIGN64;
@@ -78,16 +80,16 @@ typedef struct {
 
 typedef struct {
   float output;
-  float accumulator[2 * N_HIDDEN] ALIGN64;
+  float accumulator[N_L1] ALIGN64;
 } ALIGN64 NetworkTrace;
 
 typedef struct {
-  float g, M, V;
+  float M, V;
 } Gradient;
 
 typedef struct {
   Gradient outputBias;
-  Gradient outputWeights[2 * N_HIDDEN];
+  Gradient outputWeights[N_L1];
 
   Gradient inputBiases[N_HIDDEN];
   Gradient inputWeights[N_INPUT * N_HIDDEN];
@@ -95,16 +97,17 @@ typedef struct {
 
 typedef struct {
   float outputBias;
-  float outputWeights[2 * N_HIDDEN];
+  float outputWeights[N_L1];
 
   float inputBiases[N_HIDDEN];
   float inputWeights[N_INPUT * N_HIDDEN];
 } BatchGradients;
 
-extern const Square psqt[];
-extern const Piece charToPiece[];
-extern const Piece opposite[];
-extern const int8_t scalar[];
+extern int ITERATION;
+extern int LAST_SEEN[N_INPUT];
+extern const Piece OPPOSITE[12];
+extern const Square PSQT64_TO_32[64];
+extern const Piece CHAR_TO_PIECE[];
 extern const float SS;
 
 #endif
