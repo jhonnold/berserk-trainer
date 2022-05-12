@@ -35,6 +35,7 @@ void ApplyGradients(NN* nn, NNGradients* grads, BatchGradients* local, uint8_t* 
       for (int t = 0; t < THREADS; t++) g += local[t].inputWeights[idx];
 
       UpdateAndApplyGradientWithAge(&nn->inputWeights[idx], &grads->inputWeights[idx], g, age);
+      nn->inputWeights[idx] = fminf(64.0f, fmaxf(-64.0f, nn->inputWeights[idx]));
     }
   }
 
@@ -52,6 +53,7 @@ void ApplyGradients(NN* nn, NNGradients* grads, BatchGradients* local, uint8_t* 
     for (int t = 0; t < THREADS; t++) g += local[t].outputWeights[i];
 
     UpdateAndApplyGradient(&nn->outputWeights[i], &grads->outputWeights[i], g);
+    nn->outputWeights[i] = fminf(3.96875f, fmaxf(-3.96875f, nn->outputWeights[i]));
   }
 
   float g = 0.0;
