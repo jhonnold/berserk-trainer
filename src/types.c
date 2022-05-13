@@ -22,19 +22,15 @@ const Piece CHAR_TO_PIECE[] = {
     ['k'] = BLACK_KING     //
 };
 
-const Piece OPPOSITE[12] = {
-    BLACK_PAWN,    //
-    BLACK_KNIGHT,  //
-    BLACK_BISHOP,  //
-    BLACK_ROOK,    //
-    BLACK_QUEEN,   //
-    BLACK_KING,    //
-    WHITE_PAWN,    //
-    WHITE_KNIGHT,  //
-    WHITE_BISHOP,  //
-    WHITE_ROOK,    //
-    WHITE_QUEEN,   //
-    WHITE_KING     //
+const Feature KING_BUCKETS[64] = {
+    3, 3, 3, 3, 1, 1, 1, 1,  //
+    3, 3, 3, 3, 1, 1, 1, 1,  //
+    3, 3, 3, 3, 1, 1, 1, 1,  //
+    3, 3, 3, 3, 1, 1, 1, 1,  //
+    2, 2, 2, 2, 0, 0, 0, 0,  //
+    2, 2, 2, 2, 0, 0, 0, 0,  //
+    2, 2, 2, 2, 0, 0, 0, 0,  //
+    2, 2, 2, 2, 0, 0, 0, 0,  //
 };
 
 const Square PSQT64_TO_32[64] = {
