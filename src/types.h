@@ -14,7 +14,7 @@
 
 // total fens in berserk9dev2_2.d9.bin - 2098790400
 #define BATCH_SIZE 16384
-#define BATCHES_PER_LOAD 100
+#define BATCHES_PER_LOAD 6100
 
 extern float ALPHA;
 #define BETA1 0.95
