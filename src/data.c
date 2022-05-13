@@ -8,7 +8,7 @@
 #include "random.h"
 #include "util.h"
 
-void WriteToFile(char* dest, char* src) {
+void WriteToFile(char* dest, char* src, uint64_t c) {
   FILE* fp = fopen(src, "r");
   if (fp == NULL) {
     printf("Cannot open file: %s!\n", src);
@@ -25,8 +25,9 @@ void WriteToFile(char* dest, char* src) {
   char line[128];
 
   Board board[1];
+  uint64_t p = 0;
 
-  while (fgets(line, 128, fp)) {
+  while (p++ < c && fgets(line, 128, fp)) {
     LoadDataEntry(line, board);
     fwrite(board, sizeof(Board), 1, fout);
 

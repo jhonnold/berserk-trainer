@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
   }
 
   if (writing) {
-    WriteToFile(outputPath, samplesPath);
+    WriteToFile(outputPath, samplesPath, c);
     exit(0);
   }
 
