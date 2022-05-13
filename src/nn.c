@@ -15,7 +15,7 @@
 const int NETWORK_MAGIC = 'B' | 'R' << 8 | 'K' << 16 | 'R' << 24;
 
 void NNPredict(NN* nn, Features* f, Color stm, NetworkTrace* trace) {
-  trace->output = nn->outputBias;
+  trace->output = nn->outputBias[f->bucket];
 
   // Apply first layer
   float* stmAccumulator = trace->accumulator;
@@ -33,7 +33,7 @@ void NNPredict(NN* nn, Features* f, Color stm, NetworkTrace* trace) {
 
   ReLU(trace->accumulator, N_L1);
 
-  trace->output += DotProduct(trace->accumulator, nn->outputWeights, N_L1);
+  trace->output += DotProduct(trace->accumulator, nn->outputWeights[f->bucket], N_L1);
 }
 
 NN* LoadNN(char* path) {
@@ -59,8 +59,11 @@ NN* LoadNN(char* path) {
 
   fread(nn->inputWeights, sizeof(float), N_INPUT * N_HIDDEN, fp);
   fread(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
-  fread(nn->outputWeights, sizeof(float), N_L1, fp);
-  fread(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
+
+  for (int i = 0; i < N_BUCKETS; i++) {
+    fread(nn->outputWeights[i], sizeof(float), N_L1, fp);
+    fread(&nn->outputBias[i], sizeof(float), N_OUTPUT, fp);
+  }
 
   fclose(fp);
 
@@ -75,9 +78,11 @@ NN* LoadRandomNN() {
 
   for (int i = 0; i < N_HIDDEN; i++) nn->inputBiases[i] = 0;
 
-  for (int i = 0; i < N_L1; i++) nn->outputWeights[i] = RandomGaussian(0, sqrt(1.0 / N_HIDDEN));
+  for (int j = 0; j < N_BUCKETS; j++) {
+    for (int i = 0; i < N_L1; i++) nn->outputWeights[j][i] = RandomGaussian(0, sqrt(1.0 / N_HIDDEN));
 
-  nn->outputBias = 0;
+    nn->outputBias[j] = 0;
+  }
 
   return nn;
 }
@@ -96,8 +101,11 @@ void SaveNN(NN* nn, char* path) {
 
   fwrite(nn->inputWeights, sizeof(float), N_INPUT * N_HIDDEN, fp);
   fwrite(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
-  fwrite(nn->outputWeights, sizeof(float), N_L1, fp);
-  fwrite(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
+  
+  for (int i = 0; i < N_BUCKETS; i++) {
+    fwrite(nn->outputWeights[i], sizeof(float), N_L1, fp);
+    fwrite(&nn->outputBias[i], sizeof(float), N_OUTPUT, fp);
+  }
 
   fclose(fp);
 }

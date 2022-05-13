@@ -196,12 +196,12 @@ float Train(int batch, DataSet* data, NN* nn, BatchGradients* local, uint8_t* ac
 
     float hiddenLosses[N_L1];
     for (int i = 0; i < N_L1; i++)
-      hiddenLosses[i] = outputLoss * nn->outputWeights[i] * ReLUPrime(trace->accumulator[i]);
+      hiddenLosses[i] = outputLoss * nn->outputWeights[f->bucket][i] * ReLUPrime(trace->accumulator[i]);
     // ------------------------------------------------------------------------------------------
 
     // OUTPUT LAYER GRADIENTS -------------------------------------------------------------------
-    local[t].outputBias += outputLoss;
-    for (int i = 0; i < N_L1; i++) local[t].outputWeights[i] += trace->accumulator[i] * outputLoss;
+    local[t].outputBias[f->bucket] += outputLoss;
+    for (int i = 0; i < N_L1; i++) local[t].outputWeights[f->bucket][i] += trace->accumulator[i] * outputLoss;
     // ------------------------------------------------------------------------------------------
 
     // INPUT LAYER GRADIENTS --------------------------------------------------------------------

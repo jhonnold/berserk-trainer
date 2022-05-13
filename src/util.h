@@ -27,9 +27,11 @@ INLINE uint64_t NetworkHash(NN* nn) {
 
   for (int i = 0; i < N_HIDDEN; i++) hash = H(hash, (int)nn->inputBiases[i]);
 
-  for (int i = 0; i < N_L1; i++) hash = H(hash, (int)nn->outputWeights[i]);
+  for (int j = 0; j < N_BUCKETS; j++) {
+    for (int i = 0; i < N_L1; i++) hash = H(hash, (int)nn->outputWeights[j][i]);
 
-  hash = H(hash, (int)nn->outputBias);
+    hash = H(hash, (int)nn->outputBias[j]);
+  }
 
   return hash;
 }

@@ -8,12 +8,13 @@
 #define N_HIDDEN 512
 #define N_L1 (2 * N_HIDDEN)
 #define N_OUTPUT 1
+#define N_BUCKETS 8
 
 #define THREADS 8
 
 // total fens in berserk9dev2_2.d9.bin - 2098790400
 #define BATCH_SIZE 16384
-#define BATCHES_PER_LOAD 6100
+#define BATCHES_PER_LOAD 100
 
 extern float ALPHA;
 #define BETA1 0.95
@@ -61,7 +62,7 @@ typedef struct {
 } Board;
 
 typedef struct {
-  int8_t n;
+  int8_t n, bucket;
   Feature features[32][2];
 } Features;
 
@@ -71,8 +72,8 @@ typedef struct {
 } DataSet;
 
 typedef struct {
-  float outputBias;
-  float outputWeights[N_L1] ALIGN64;
+  float outputBias[N_BUCKETS] ALIGN64;
+  float outputWeights[N_BUCKETS][N_L1] ALIGN64;
 
   float inputBiases[N_HIDDEN] ALIGN64;
   float inputWeights[N_INPUT * N_HIDDEN] ALIGN64;
@@ -88,16 +89,16 @@ typedef struct {
 } Gradient;
 
 typedef struct {
-  float outputBiasM, outputBiasV;
-  float outputWeightsM[N_L1] ALIGN64, outputWeightsV[N_L1] ALIGN64;
+  float outputBiasM[N_BUCKETS] ALIGN64, outputBiasV[N_BUCKETS] ALIGN64;
+  float outputWeightsM[N_BUCKETS][N_L1] ALIGN64, outputWeightsV[N_BUCKETS][N_L1] ALIGN64;
 
   float inputBiasesM[N_HIDDEN] ALIGN64, inputBiasesV[N_HIDDEN] ALIGN64;
   float inputWeightsM[N_INPUT * N_HIDDEN] ALIGN64, inputWeightsV[N_INPUT * N_HIDDEN] ALIGN64;
 } ALIGN64 NNGradients;
 
 typedef struct {
-  float outputBias;
-  float outputWeights[N_L1] ALIGN64;
+  float outputBias[N_BUCKETS] ALIGN64;
+  float outputWeights[N_BUCKETS][N_L1] ALIGN64;
 
   float inputBiases[N_HIDDEN] ALIGN64;
   float inputWeights[N_INPUT * N_HIDDEN] ALIGN64;

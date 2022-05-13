@@ -21,6 +21,8 @@ void ToFeatures(Board* board, Features* f) {
 
     f->n++;
   }
+
+  f->bucket = Bucket(f->n);
 }
 
 void ParseFen(char* fen, Board* board) {

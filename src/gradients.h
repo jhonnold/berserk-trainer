@@ -83,21 +83,26 @@ void ApplyGradients(NN* nn, NNGradients* grads, BatchGradients* local, uint8_t* 
   }
 
 #pragma omp parallel for schedule(static) num_threads(THREADS)
-  for (size_t i = 0; i < N_L1; i += WIDTH) {
-    __m256* values = (__m256*)&nn->outputWeights[i];
-    __m256* momentums = (__m256*)&grads->outputWeightsM[i];
-    __m256* velocities = (__m256*)&grads->outputWeightsV[i];
+  for (size_t b = 0; b < N_BUCKETS; b++) {
+    for (size_t i = 0; i < N_L1; i += WIDTH) {
+      __m256* values = (__m256*)&nn->outputWeights[b][i];
+      __m256* momentums = (__m256*)&grads->outputWeightsM[b][i];
+      __m256* velocities = (__m256*)&grads->outputWeightsV[b][i];
 
-    __m256 gradients = _mm256_setzero_ps();
-    for (size_t t = 0; t < THREADS; t++) gradients = _mm256_add_ps(gradients, *(__m256*)&local[t].outputWeights[i]);
+      __m256 gradients = _mm256_setzero_ps();
+      for (size_t t = 0; t < THREADS; t++)
+        gradients = _mm256_add_ps(gradients, *(__m256*)&local[t].outputWeights[b][i]);
 
-    UpdateAndApplyGradient(values, momentums, velocities, gradients);
+      UpdateAndApplyGradient(values, momentums, velocities, gradients);
+    }
   }
 
-  float g = 0;
-  for (int t = 0; t < THREADS; t++) g += local[t].outputBias;
+  for (size_t b = 0; b < N_BUCKETS; b++) {
+    float g = 0;
+    for (size_t t = 0; t < THREADS; t++) g += local[t].outputBias[b];
 
-  UpdateAndApplyGradientSingle(&nn->outputBias, &grads->outputBiasM, &grads->outputBiasV, g);
+    UpdateAndApplyGradientSingle(&nn->outputBias[b], &grads->outputBiasM[b], &grads->outputBiasV[b], g);
+  }
 }
 
 void ClearGradients(NNGradients* gradients) {
