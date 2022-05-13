@@ -23,28 +23,51 @@ void UpdateAndApplyGradient(__m256* values, __m256* momentums, __m256* velocitie
   const __m256 oneMinusBeta2 = _mm256_set1_ps(1.0 - BETA2);
 
   *momentums = _mm256_add_ps(_mm256_mul_ps(beta1, *momentums), _mm256_mul_ps(oneMinusBeta1, gradients));
-  *velocities = _mm256_add_ps(_mm256_mul_ps(beta2, *velocities), _mm256_mul_ps(oneMinusBeta2, _mm256_mul_ps(gradients, gradients)));
+  *velocities = _mm256_add_ps(_mm256_mul_ps(beta2, *velocities),
+                              _mm256_mul_ps(oneMinusBeta2, _mm256_mul_ps(gradients, gradients)));
 
-  *values = _mm256_sub_ps(*values, _mm256_div_ps(
-    _mm256_mul_ps(lr, *momentums),
-    _mm256_add_ps(epsilon, _mm256_sqrt_ps(*velocities))
-  ));
+  *values = _mm256_sub_ps(
+      *values, _mm256_div_ps(_mm256_mul_ps(lr, *momentums), _mm256_add_ps(epsilon, _mm256_sqrt_ps(*velocities))));
 }
 
-void ApplyGradients(NN* nn, NNGradients* grads, BatchGradients* local) {
+void UpdateAndApplyGradientWithAge(__m256* values, __m256* momentums, __m256* velocities, __m256 gradients, int age) {
+  const __m256 lr = _mm256_set1_ps(ALPHA);
+  const __m256 epsilon = _mm256_set1_ps(EPSILON);
+  const __m256 beta1 = _mm256_set1_ps(powf(BETA1, age));
+  const __m256 beta2 = _mm256_set1_ps(powf(BETA2, age));
+  const __m256 oneMinusBeta1 = _mm256_set1_ps(1.0 - BETA1);
+  const __m256 oneMinusBeta2 = _mm256_set1_ps(1.0 - BETA2);
+
+  *momentums = _mm256_add_ps(_mm256_mul_ps(beta1, *momentums), _mm256_mul_ps(oneMinusBeta1, gradients));
+  *velocities = _mm256_add_ps(_mm256_mul_ps(beta2, *velocities),
+                              _mm256_mul_ps(oneMinusBeta2, _mm256_mul_ps(gradients, gradients)));
+
+  *values = _mm256_sub_ps(
+      *values, _mm256_div_ps(_mm256_mul_ps(lr, *momentums), _mm256_add_ps(epsilon, _mm256_sqrt_ps(*velocities))));
+}
+
+void ApplyGradients(NN* nn, NNGradients* grads, BatchGradients* local, uint8_t* active) {
   const size_t WIDTH = sizeof(__m256) / sizeof(float);
 
 #pragma omp parallel for schedule(static) num_threads(THREADS)
-  for (size_t i = 0; i < N_INPUT * N_HIDDEN; i += WIDTH) {
-    __m256* values = (__m256*)&nn->inputWeights[i];
-    __m256* momentums = (__m256*)&grads->inputWeightsM[i];
-    __m256* velocities = (__m256*)&grads->inputWeightsV[i];
+  for (size_t i = 0; i < N_INPUT; i++) {
+    if (!active[i]) continue;
 
-    __m256 gradients = _mm256_setzero_ps();
-    for (size_t t = 0; t < THREADS; t++)
-      gradients = _mm256_add_ps(gradients, *(__m256*)&local[t].inputWeights[i]);
-    
-    UpdateAndApplyGradient(values, momentums, velocities, gradients);
+    int age = ITERATION - LAST_SEEN[i];
+    LAST_SEEN[i] = ITERATION;
+
+    for (size_t j = 0; j < N_HIDDEN; j += WIDTH) {
+      size_t idx = i * N_HIDDEN + j;
+
+      __m256* values = (__m256*)&nn->inputWeights[idx];
+      __m256* momentums = (__m256*)&grads->inputWeightsM[idx];
+      __m256* velocities = (__m256*)&grads->inputWeightsV[idx];
+
+      __m256 gradients = _mm256_setzero_ps();
+      for (size_t t = 0; t < THREADS; t++) gradients = _mm256_add_ps(gradients, *(__m256*)&local[t].inputWeights[idx]);
+
+      UpdateAndApplyGradientWithAge(values, momentums, velocities, gradients, age);
+    }
   }
 
 #pragma omp parallel for schedule(static) num_threads(THREADS)
@@ -54,8 +77,7 @@ void ApplyGradients(NN* nn, NNGradients* grads, BatchGradients* local) {
     __m256* velocities = (__m256*)&grads->inputBiasesV[i];
 
     __m256 gradients = _mm256_setzero_ps();
-    for (size_t t = 0; t < THREADS; t++)
-      gradients = _mm256_add_ps(gradients, *(__m256*)&local[t].inputBiases[i]);
+    for (size_t t = 0; t < THREADS; t++) gradients = _mm256_add_ps(gradients, *(__m256*)&local[t].inputBiases[i]);
 
     UpdateAndApplyGradient(values, momentums, velocities, gradients);
   }
@@ -67,8 +89,7 @@ void ApplyGradients(NN* nn, NNGradients* grads, BatchGradients* local) {
     __m256* velocities = (__m256*)&grads->outputWeightsV[i];
 
     __m256 gradients = _mm256_setzero_ps();
-    for (size_t t = 0; t < THREADS; t++)
-      gradients = _mm256_add_ps(gradients, *(__m256*)&local[t].outputWeights[i]);
+    for (size_t t = 0; t < THREADS; t++) gradients = _mm256_add_ps(gradients, *(__m256*)&local[t].outputWeights[i]);
 
     UpdateAndApplyGradient(values, momentums, velocities, gradients);
   }

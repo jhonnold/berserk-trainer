@@ -9,9 +9,9 @@
 #define N_L1 (2 * N_HIDDEN)
 #define N_OUTPUT 1
 
-#define THREADS 8
+#define THREADS 6
 
-// total fens in berserk9dev2_2.d9.bin - 3264074531
+// total fens in berserk9dev2_2.d9.bin - 2098790400
 #define BATCH_SIZE 16384
 #define BATCHES_PER_LOAD 6100
 
@@ -93,7 +93,7 @@ typedef struct {
 
   float inputBiasesM[N_HIDDEN] ALIGN64, inputBiasesV[N_HIDDEN] ALIGN64;
   float inputWeightsM[N_INPUT * N_HIDDEN] ALIGN64, inputWeightsV[N_INPUT * N_HIDDEN] ALIGN64;
-} NNGradients;
+} ALIGN64 NNGradients;
 
 typedef struct {
   float outputBias;
@@ -101,7 +101,10 @@ typedef struct {
 
   float inputBiases[N_HIDDEN] ALIGN64;
   float inputWeights[N_INPUT * N_HIDDEN] ALIGN64;
-} BatchGradients;
+} ALIGN64 BatchGradients;
+
+extern int ITERATION;
+extern int LAST_SEEN[N_INPUT];
 
 extern const Piece OPPOSITE[12];
 extern const Square PSQT64_TO_32[64];

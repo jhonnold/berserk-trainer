@@ -96,10 +96,10 @@ int main(int argc, char** argv) {
     LoadEntries(validationsPath, validation, validations, 0);
   }
 
-  NNGradients* gradients = malloc(sizeof(NNGradients));
+  NNGradients* gradients = AlignedMalloc(sizeof(NNGradients));
   ClearGradients(gradients);
 
-  BatchGradients* local = malloc(sizeof(BatchGradients) * THREADS);
+  BatchGradients* local = AlignedMalloc(sizeof(BatchGradients) * THREADS);
 
   printf("Calculating Validation Error...\n");
   float error = TotalError(validation, nn);
@@ -122,8 +122,11 @@ int main(int argc, char** argv) {
     ShuffleData(data);
 
     for (int b = 0; b < BATCHES_PER_LOAD; b++) {
-      float be = Train(b, data, nn, local);
-      ApplyGradients(nn, gradients, local);
+      uint8_t active[N_INPUT] = {0};
+      ITERATION++;
+
+      float be = Train(b, data, nn, local, active);
+      ApplyGradients(nn, gradients, local, active);
 
       long now = GetTimeMS();
       printf("\rBatch: [#%d/%d], Error: [%1.8f], Speed: [%9.0f pos/s]", b + 1, BATCHES_PER_LOAD, be,
@@ -143,8 +146,7 @@ int main(int argc, char** argv) {
 
     error = newError;
 
-    if (epoch == 250 || epoch == 325)
-      ALPHA /= 10.0f;
+    if (epoch == 250 || epoch == 325) ALPHA /= 10.0f;
   }
 }
 
@@ -167,11 +169,12 @@ float TotalError(DataSet* data, NN* nn) {
   return e / data->n;
 }
 
-float Train(int batch, DataSet* data, NN* nn, BatchGradients* local) {
+float Train(int batch, DataSet* data, NN* nn, BatchGradients* local, uint8_t* active) {
+  float e = 0.0;
+  uint8_t actives[THREADS][N_INPUT] = {0};
+
 #pragma omp parallel for schedule(static) num_threads(THREADS)
   for (int t = 0; t < THREADS; t++) memset(&local[t], 0, sizeof(BatchGradients));
-
-  float e = 0.0;
 
 #pragma omp parallel for schedule(static) num_threads(THREADS) reduction(+ : e)
   for (int n = 0; n < BATCH_SIZE; n++) {
@@ -218,6 +221,8 @@ float Train(int batch, DataSet* data, NN* nn, BatchGradients* local) {
       int f1 = f->features[i][board.stm];
       int f2 = f->features[i][board.stm ^ 1];
 
+      actives[t][f1] = actives[t][f2] = 1;
+
       for (int j = 0; j < N_HIDDEN; j++) {
         local[t].inputWeights[f1 * N_HIDDEN + j] += stmLosses[j] + stmLassos[j];
         local[t].inputWeights[f2 * N_HIDDEN + j] += xstmLosses[j] + xstmLassos[j];
@@ -225,6 +230,9 @@ float Train(int batch, DataSet* data, NN* nn, BatchGradients* local) {
     }
     // ------------------------------------------------------------------------------------------
   }
+
+  for (int t = 0; t < THREADS; t++)
+    for (int i = 0; i < N_INPUT; i++) active[i] |= actives[t][i];
 
   return e / BATCH_SIZE;
 }
