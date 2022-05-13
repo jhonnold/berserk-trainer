@@ -88,23 +88,21 @@ typedef struct {
 } Gradient;
 
 typedef struct {
-  Gradient outputBias;
-  Gradient outputWeights[N_L1];
+  float outputBiasM, outputBiasV;
+  float outputWeightsM[N_L1] ALIGN64, outputWeightsV[N_L1] ALIGN64;
 
-  Gradient inputBiases[N_HIDDEN];
-  Gradient inputWeights[N_INPUT * N_HIDDEN];
+  float inputBiasesM[N_HIDDEN] ALIGN64, inputBiasesV[N_HIDDEN] ALIGN64;
+  float inputWeightsM[N_INPUT * N_HIDDEN] ALIGN64, inputWeightsV[N_INPUT * N_HIDDEN] ALIGN64;
 } NNGradients;
 
 typedef struct {
   float outputBias;
-  float outputWeights[N_L1];
+  float outputWeights[N_L1] ALIGN64;
 
-  float inputBiases[N_HIDDEN];
-  float inputWeights[N_INPUT * N_HIDDEN];
+  float inputBiases[N_HIDDEN] ALIGN64;
+  float inputWeights[N_INPUT * N_HIDDEN] ALIGN64;
 } BatchGradients;
 
-extern int ITERATION;
-extern int LAST_SEEN[N_INPUT];
 extern const Piece OPPOSITE[12];
 extern const Square PSQT64_TO_32[64];
 extern const Piece CHAR_TO_PIECE[];

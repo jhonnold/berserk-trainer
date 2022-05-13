@@ -122,11 +122,8 @@ int main(int argc, char** argv) {
     ShuffleData(data);
 
     for (int b = 0; b < BATCHES_PER_LOAD; b++) {
-      uint8_t active[N_INPUT] = {0};
-      ITERATION++;
-
-      float be = Train(b, data, nn, local, active);
-      ApplyGradients(nn, gradients, local, active);
+      float be = Train(b, data, nn, local);
+      ApplyGradients(nn, gradients, local);
 
       long now = GetTimeMS();
       printf("\rBatch: [#%d/%d], Error: [%1.8f], Speed: [%9.0f pos/s]", b + 1, BATCHES_PER_LOAD, be,
@@ -170,11 +167,10 @@ float TotalError(DataSet* data, NN* nn) {
   return e / data->n;
 }
 
-float Train(int batch, DataSet* data, NN* nn, BatchGradients* local, uint8_t* active) {
+float Train(int batch, DataSet* data, NN* nn, BatchGradients* local) {
 #pragma omp parallel for schedule(static) num_threads(THREADS)
   for (int t = 0; t < THREADS; t++) memset(&local[t], 0, sizeof(BatchGradients));
 
-  uint8_t actives[THREADS][N_INPUT] = {0};
   float e = 0.0;
 
 #pragma omp parallel for schedule(static) num_threads(THREADS) reduction(+ : e)
@@ -222,8 +218,6 @@ float Train(int batch, DataSet* data, NN* nn, BatchGradients* local, uint8_t* ac
       int f1 = f->features[i][board.stm];
       int f2 = f->features[i][board.stm ^ 1];
 
-      actives[t][f1] = actives[t][f2] = 1;
-
       for (int j = 0; j < N_HIDDEN; j++) {
         local[t].inputWeights[f1 * N_HIDDEN + j] += stmLosses[j] + stmLassos[j];
         local[t].inputWeights[f2 * N_HIDDEN + j] += xstmLosses[j] + xstmLassos[j];
@@ -231,9 +225,6 @@ float Train(int batch, DataSet* data, NN* nn, BatchGradients* local, uint8_t* ac
     }
     // ------------------------------------------------------------------------------------------
   }
-
-  for (int t = 0; t < THREADS; t++)
-    for (int i = 0; i < N_INPUT; i++) active[i] |= actives[t][i];
 
   return e / BATCH_SIZE;
 }
