@@ -3,13 +3,14 @@
 
 #include <inttypes.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #define N_INPUT (12 * 4 * 32)
 #define N_HIDDEN 512
 #define N_L1 (2 * N_HIDDEN)
 #define N_OUTPUT 1
 
-#define THREADS 8
+#define THREADS 16
 
 // total fens in berserk9dev2.d9.bin - 2098790400
 #define BATCH_SIZE 16384
@@ -69,6 +70,13 @@ typedef struct {
   uint64_t n;
   Board* entries;
 } DataSet;
+
+typedef struct {
+  FILE* fin;
+  uint64_t entriesCount;
+
+  DataSet* nextData;
+} CyclicalLoadArgs;
 
 typedef struct {
   float outputBias;

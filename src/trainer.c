@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #include "bits.h"
 #include "board.h"
@@ -13,13 +14,14 @@
 #include "random.h"
 #include "util.h"
 
+extern volatile int DATA_LOADED;
+extern volatile int COMPLETE;
+
 int main(int argc, char** argv) {
   setbuf(stdin, NULL);
   setbuf(stdout, NULL);
 
   SeedRandom();
-
-  uint8_t binaryRead = 0;
 
   uint64_t entries = 1000000000;
   uint64_t validations = 1000000;
@@ -32,7 +34,7 @@ int main(int argc, char** argv) {
   char outputPath[128] = {0};
 
   int c;
-  while ((c = getopt(argc, argv, "bc:v:z:w:d:n:")) != -1) {
+  while ((c = getopt(argc, argv, "c:v:z:w:d:n:")) != -1) {
     switch (c) {
       case 'd':
         strcpy(samplesPath, optarg);
@@ -52,9 +54,6 @@ int main(int argc, char** argv) {
       case 'w':
         strcpy(outputPath, optarg);
         writing = 1;
-        break;
-      case 'b':
-        binaryRead = 1;
         break;
       case '?':
         return 1;
@@ -80,46 +79,46 @@ int main(int argc, char** argv) {
     nn = LoadNN(baseNetworkPath);
   }
 
-  printf("Loading entries from %s\n", samplesPath);
-
   DataSet* validation = malloc(sizeof(DataSet));
   validation->entries = NULL;
   validation->n = 0;
+
+  LoadEntriesBinary(validationsPath, validation, validations, 0);
 
   DataSet* data = malloc(sizeof(DataSet));
   data->entries = malloc(sizeof(Board) * BATCHES_PER_LOAD * BATCH_SIZE);
   data->n = 0;
 
-  if (binaryRead) {
-    LoadEntriesBinary(validationsPath, validation, validations, 0);
-  } else {
-    LoadEntries(validationsPath, validation, validations, 0);
-  }
+  DataSet* nextData = malloc(sizeof(DataSet));
+  nextData->entries = malloc(sizeof(Board) * BATCHES_PER_LOAD * BATCH_SIZE);
+  nextData->n = 0;
 
   NNGradients* gradients = malloc(sizeof(NNGradients));
   ClearGradients(gradients);
 
   BatchGradients* local = malloc(sizeof(BatchGradients) * THREADS);
 
-  printf("Calculating Validation Error...\n");
   float error = TotalError(validation, nn);
   printf("Starting Error: [%1.8f]\n", error);
 
-  int batchesPerDataset = entries / BATCH_SIZE;
-  int diskLoads = floor((double)batchesPerDataset / BATCHES_PER_LOAD);
+  CyclicalLoadArgs* args = malloc(sizeof(CyclicalLoadArgs));
+  args->entriesCount = entries;
+  args->fin = fopen(samplesPath, "rb");
+  args->nextData = nextData;
+
+  pthread_t loadingThread;
+  pthread_create(&loadingThread, NULL, &CyclicalLoader, args);
+  pthread_detach(loadingThread);
 
   int epoch = 0;
   while (++epoch <= 400) {
     long epochStart = GetTimeMS();
 
-    int d = epoch % diskLoads;
-    if (binaryRead)
-      LoadEntriesBinary(samplesPath, data, BATCH_SIZE * BATCHES_PER_LOAD, d * BATCH_SIZE * BATCHES_PER_LOAD);
-    else
-      LoadEntries(samplesPath, data, BATCH_SIZE * BATCHES_PER_LOAD, d * BATCH_SIZE * BATCHES_PER_LOAD);
+    while (!DATA_LOADED)
+      ;
 
-    printf("\rShuffling...");
-    ShuffleData(data);
+    memcpy(data->entries, nextData->entries, sizeof(Board) * nextData->n);
+    DATA_LOADED = 0;
 
     for (int b = 0; b < BATCHES_PER_LOAD; b++) {
       uint8_t active[N_INPUT] = {0};
@@ -149,6 +148,8 @@ int main(int argc, char** argv) {
     if (epoch == 250 || epoch == 325)
       ALPHA /= 10.0f;
   }
+
+  COMPLETE = 1;
 }
 
 float TotalError(DataSet* data, NN* nn) {
