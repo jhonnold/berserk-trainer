@@ -1,5 +1,6 @@
 #include "data.h"
 
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,6 +8,9 @@
 #include "board.h"
 #include "random.h"
 #include "util.h"
+
+volatile int DATA_LOADED = 0;
+volatile int COMPLETE = 0;
 
 void WriteToFile(char* dest, char* src, uint64_t entries) {
   FILE* fp = fopen(src, "r");
@@ -31,13 +35,13 @@ void WriteToFile(char* dest, char* src, uint64_t entries) {
     fwrite(board, sizeof(Board), 1, fout);
 
     count++;
-    if (!(count % 10000000)) printf("\rWrote positions: [%10ld]", count);
+    if (!(count % 10000000)) printf("\rWrote positions: [%10" PRId64 "]", count);
   }
 
   fclose(fp);
   fclose(fout);
 
-  printf("\rWrote positions: [%10ld]\n", count);
+  printf("\rWrote positions: [%10" PRId64 "]\n", count);
 }
 
 void LoadEntriesBinary(char* path, DataSet* data, uint64_t n, uint64_t offset) {
@@ -53,7 +57,7 @@ void LoadEntriesBinary(char* path, DataSet* data, uint64_t n, uint64_t offset) {
 
   size_t x;
   if ((x = fread(data->entries, sizeof(Board), n, fp)) != n) {
-    printf("Failed to read %ld files from %s with offset %ld - %ld\n", n, path, offset, x);
+    printf("Failed to read %" PRId64 " files from %s with offset %" PRId64 " - %" PRId64 "\n", n, path, offset, x);
     exit(1);
   }
 
@@ -121,4 +125,31 @@ void ShuffleData(DataSet* data) {
     data->entries[i] = data->entries[j];
     data->entries[j] = temp;
   }
+}
+
+void* CyclicalLoader(void* args) {
+  CyclicalLoadArgs* loader = (CyclicalLoadArgs*)args;
+
+  size_t readsize = BATCH_SIZE * BATCHES_PER_LOAD;
+  size_t location = 0;
+
+  while (!COMPLETE) {
+    // back to the start
+    if (location + readsize > loader->entriesCount) fseek(loader->fin, 0, SEEK_SET);
+
+    size_t x;
+    if ((x = fread(loader->nextData->entries, sizeof(Board), readsize, loader->fin)) != readsize)
+      printf("Failed to read entries from file!\n"), exit(1);
+
+    loader->nextData->n = readsize;
+    location += readsize;
+
+    ShuffleData(loader->nextData);
+
+    DATA_LOADED = 1;
+    while (DATA_LOADED)
+      ;
+  }
+
+  return NULL;
 }

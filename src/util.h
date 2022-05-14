@@ -8,7 +8,6 @@
 
 #define INLINE static inline __attribute__((always_inline))
 #define H(h, v) ((h) + (324723947ULL + (v))) ^ 93485734985ULL
-#define min(a, b) ((a) < (b) ? (a) : (b))
 
 long GetTimeMS();
 
