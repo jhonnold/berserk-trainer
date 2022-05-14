@@ -135,7 +135,10 @@ void* CyclicalLoader(void* args) {
 
   while (!COMPLETE) {
     // back to the start
-    if (location + readsize > loader->entriesCount) fseek(loader->fin, 0, SEEK_SET);
+    if (location + readsize > loader->entriesCount) {
+      fseek(loader->fin, 0, SEEK_SET);
+      location = 0;
+    }
 
     size_t x;
     if ((x = fread(loader->nextData->entries, sizeof(Board), readsize, loader->fin)) != readsize)
