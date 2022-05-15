@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
     }
 
     char buffer[64];
-    sprintf(buffer, "../nets/berserk-kq.e%d.2x%d.nn", epoch, N_HIDDEN);
+    sprintf(buffer, "../nets/berserk-nnue.e%d.nn", epoch);
     SaveNN(nn, buffer);
 
     float newError = TotalError(validation, nn);
@@ -196,14 +196,40 @@ float Train(int batch, DataSet* data, NN* nn, BatchGradients* local, uint8_t* ac
     // LOSS CALCULATIONS ------------------------------------------------------------------------
     float outputLoss = SigmoidPrime(out) * ErrorGradient(out, &board);
 
-    float hiddenLosses[N_L1];
+    float l3Losses[N_L3];
+    for (int i = 0; i < N_L3; i++)
+      l3Losses[i] = outputLoss * nn->outputWeights[i] * ReLUPrime(trace->l3acc[i]);  
+
+    float l2Losses[N_L2] = {0};
+    for (int i = 0; i < N_L2; i++)
+      for (int j = 0; j < N_L3; j++)
+        l2Losses[i] += l3Losses[j] * nn->l3Weights[j * N_L2 + i] * ReLUPrime(trace->l2acc[i]);
+
+    float hiddenLosses[N_L1] = {0};
     for (int i = 0; i < N_L1; i++)
-      hiddenLosses[i] = outputLoss * nn->outputWeights[i] * ReLUPrime(trace->accumulator[i]);
+      for (int j = 0; j < N_L2; j++)
+        hiddenLosses[i] += l2Losses[j] * nn->l2Weights[j * N_L1 + i] * ReLUPrime(trace->accumulator[i]);
     // ------------------------------------------------------------------------------------------
 
     // OUTPUT LAYER GRADIENTS -------------------------------------------------------------------
     local[t].outputBias += outputLoss;
-    for (int i = 0; i < N_L1; i++) local[t].outputWeights[i] += trace->accumulator[i] * outputLoss;
+    for (int i = 0; i < N_L2; i++) local[t].outputWeights[i] += trace->l2acc[i] * outputLoss;
+    // ------------------------------------------------------------------------------------------
+
+    // L3 LAYER GRADIENTS -------------------------------------------------------------------
+    for (int i = 0; i < N_L3; i++) local[t].l3Biases[i] += l3Losses[i];
+
+    for (int i = 0; i < N_L3; i++)
+      for (int j = 0; j < N_L2; j++)
+        local[t].l2Weights[i * N_L2 + j] += trace->l2acc[j] * l3Losses[i];
+    // ------------------------------------------------------------------------------------------
+
+    // L2 LAYER GRADIENTS -------------------------------------------------------------------
+    for (int i = 0; i < N_L2; i++) local[t].l2Biases[i] += l2Losses[i];
+
+    for (int i = 0; i < N_L2; i++)
+      for (int j = 0; j < N_L1; j++)
+        local[t].l2Weights[i * N_L1 + j] += trace->accumulator[j] * l2Losses[i];
     // ------------------------------------------------------------------------------------------
 
     // INPUT LAYER GRADIENTS --------------------------------------------------------------------

@@ -33,7 +33,15 @@ void NNPredict(NN* nn, Features* f, Color stm, NetworkTrace* trace) {
 
   ReLU(trace->accumulator, N_L1);
 
-  trace->output += DotProduct(trace->accumulator, nn->outputWeights, N_L1);
+  memcpy(trace->l2acc, nn->l2Biases, sizeof(float) * N_L2);
+  for (int i = 0; i < N_L2; i++) trace->l2acc[i] += DotProduct(trace->accumulator, &nn->l2Weights[N_L1 * i], N_L1);
+  ReLU(trace->l2acc, N_L2);
+
+  memcpy(trace->l3acc, nn->l3Biases, sizeof(float) * N_L3);
+  for (int i = 0; i < N_L3; i++) trace->l3acc[i] += DotProduct(trace->l2acc, &nn->l3Weights[N_L2 * i], N_L2);
+  ReLU(trace->l3acc, N_L3);
+
+  trace->output += DotProduct(trace->l3acc, nn->outputWeights, N_L3);
 }
 
 NN* LoadNN(char* path) {
@@ -59,7 +67,11 @@ NN* LoadNN(char* path) {
 
   fread(nn->inputWeights, sizeof(float), N_INPUT * N_HIDDEN, fp);
   fread(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
-  fread(nn->outputWeights, sizeof(float), N_L1, fp);
+  fread(nn->l2Weights, sizeof(float), N_L1 * N_L2, fp);
+  fread(nn->l2Biases, sizeof(float), N_L2, fp);
+  fread(nn->l3Weights, sizeof(float), N_L2 * N_L3, fp);
+  fread(nn->l3Biases, sizeof(float), N_L3, fp);
+  fread(nn->outputWeights, sizeof(float), N_L3, fp);
   fread(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
 
   fclose(fp);
@@ -71,11 +83,19 @@ NN* LoadRandomNN() {
   srand(time(NULL));
   NN* nn = AlignedMalloc(sizeof(NN));
 
-  for (int i = 0; i < N_INPUT * N_HIDDEN; i++) nn->inputWeights[i] = RandomGaussian(0, sqrt(1.0 / 32));
+  for (int i = 0; i < N_INPUT * N_HIDDEN; i++) nn->inputWeights[i] = RandomGaussian(0, sqrt(2.0 / 32));
 
   for (int i = 0; i < N_HIDDEN; i++) nn->inputBiases[i] = 0;
 
-  for (int i = 0; i < N_L1; i++) nn->outputWeights[i] = RandomGaussian(0, sqrt(1.0 / N_HIDDEN));
+  for (int i = 0; i < N_L1 * N_L2; i++) nn->l2Weights[i] = RandomGaussian(0, sqrt(2.0 / N_L1));
+
+  for (int i = 0; i < N_L2; i++) nn->l2Biases[i] = 0;
+
+  for (int i = 0; i < N_L2 * N_L3; i++) nn->l3Weights[i] = RandomGaussian(0, sqrt(2.0 / N_L2));
+
+  for (int i = 0; i < N_L3; i++) nn->l3Biases[i] = 0;
+
+  for (int i = 0; i < N_L3; i++) nn->outputWeights[i] = RandomGaussian(0, sqrt(2.0 / N_L3));
 
   nn->outputBias = 0;
 
@@ -96,7 +116,11 @@ void SaveNN(NN* nn, char* path) {
 
   fwrite(nn->inputWeights, sizeof(float), N_INPUT * N_HIDDEN, fp);
   fwrite(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
-  fwrite(nn->outputWeights, sizeof(float), N_L1, fp);
+  fwrite(nn->l2Weights, sizeof(float), N_L1 * N_L2, fp);
+  fwrite(nn->l2Biases, sizeof(float), N_L2, fp);
+  fwrite(nn->l3Weights, sizeof(float), N_L2 * N_L3, fp);
+  fwrite(nn->l3Biases, sizeof(float), N_L3, fp);
+  fwrite(nn->outputWeights, sizeof(float), N_L3, fp);
   fwrite(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
 
   fclose(fp);

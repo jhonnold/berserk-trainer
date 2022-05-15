@@ -8,6 +8,8 @@
 #define N_INPUT (12 * 2 * 64)
 #define N_HIDDEN 512
 #define N_L1 (2 * N_HIDDEN)
+#define N_L2 16
+#define N_L3 32
 #define N_OUTPUT 1
 
 #define THREADS 16
@@ -80,7 +82,13 @@ typedef struct {
 
 typedef struct {
   float outputBias;
-  float outputWeights[N_L1] ALIGN64;
+  float outputWeights[N_L3] ALIGN64;
+
+  float l3Biases[N_L3] ALIGN64;
+  float l3Weights[N_L2 * N_L3] ALIGN64;
+
+  float l2Biases[N_L2] ALIGN64;
+  float l2Weights[N_L1 * N_L2] ALIGN64;
 
   float inputBiases[N_HIDDEN] ALIGN64;
   float inputWeights[N_INPUT * N_HIDDEN] ALIGN64;
@@ -88,6 +96,8 @@ typedef struct {
 
 typedef struct {
   float output;
+  float l3acc[N_L3] ALIGN64;
+  float l2acc[N_L2] ALIGN64;
   float accumulator[N_L1] ALIGN64;
 } ALIGN64 NetworkTrace;
 
@@ -97,7 +107,13 @@ typedef struct {
 
 typedef struct {
   Gradient outputBias;
-  Gradient outputWeights[N_L1];
+  Gradient outputWeights[N_L3];
+
+  Gradient l3Biases[N_L3];
+  Gradient l3Weights[N_L2 * N_L3];
+
+  Gradient l2Biases[N_L2];
+  Gradient l2Weights[N_L1 * N_L2];
 
   Gradient inputBiases[N_HIDDEN];
   Gradient inputWeights[N_INPUT * N_HIDDEN];
@@ -105,7 +121,13 @@ typedef struct {
 
 typedef struct {
   float outputBias;
-  float outputWeights[N_L1];
+  float outputWeights[N_L3];
+
+  float l3Biases[N_L3];
+  float l3Weights[N_L2 * N_L3];
+
+  float l2Biases[N_L2];
+  float l2Weights[N_L1 * N_L2];
 
   float inputBiases[N_HIDDEN];
   float inputWeights[N_INPUT * N_HIDDEN];
