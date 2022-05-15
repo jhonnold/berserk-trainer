@@ -21,8 +21,8 @@ extern float ALPHA;
 #define BETA2 0.999
 #define EPSILON 1e-8
 
-#define STEP_RATE 75
-#define GAMMA 0.5f
+#define STEP_RATE 100
+#define GAMMA 0.1f
 
 #define WDL 0.5
 #define EVAL 0.5
