@@ -31,7 +31,7 @@ extern float ALPHA;
 
 #define LAMBDA (1.0 / (1024 * 1024))
 
-#define CRELU_MAX 256
+#define CRELU_MAX 1.0
 
 #define ALIGN64 __attribute__((aligned(64)))
 
