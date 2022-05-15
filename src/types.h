@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#define N_INPUT (12 * 2 * 64)
+#define N_INPUT (12 * 6 * 64)
 #define N_HIDDEN 512
 #define N_L1 (2 * N_HIDDEN)
 #define N_OUTPUT 1
@@ -116,6 +116,7 @@ typedef struct {
 extern int ITERATION;
 extern int LAST_SEEN[N_INPUT];
 extern const Piece OPPOSITE[12];
+extern const Feature KING_BUCKET_S;
 extern const Feature KING_BUCKETS[64];
 extern const Square PSQT64_TO_32[64];
 extern const Piece CHAR_TO_PIECE[];
