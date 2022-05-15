@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
     }
 
     char buffer[64];
-    sprintf(buffer, "../nets/berserk-kq.e%d.2x%d.nn", epoch, N_HIDDEN);
+    sprintf(buffer, "../nets/berserk-nnue.e%d.nn", epoch);
     SaveNN(nn, buffer);
 
     float newError = TotalError(validation, nn);
