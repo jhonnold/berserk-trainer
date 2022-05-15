@@ -3,13 +3,14 @@
 
 #include <inttypes.h>
 #include <stdbool.h>
+#include <stdio.h>
 
-#define N_INPUT (12 * 4 * 32)
+#define N_INPUT (12 * 2 * 64)
 #define N_HIDDEN 512
 #define N_L1 (2 * N_HIDDEN)
 #define N_OUTPUT 1
 
-#define THREADS 8
+#define THREADS 16
 
 // total fens in berserk9dev2.d9.bin - 2098790400
 #define BATCH_SIZE 16384
@@ -19,7 +20,9 @@ extern float ALPHA;
 #define BETA1 0.95
 #define BETA2 0.999
 #define EPSILON 1e-8
-#define GAMMA 0.992f
+
+#define STEP_RATE 100
+#define GAMMA 0.1f
 
 #define WDL 0.5
 #define EVAL 0.5
@@ -71,6 +74,13 @@ typedef struct {
 } DataSet;
 
 typedef struct {
+  FILE* fin;
+  uint64_t entriesCount;
+
+  DataSet* nextData;
+} CyclicalLoadArgs;
+
+typedef struct {
   float outputBias;
   float outputWeights[N_L1] ALIGN64;
 
@@ -106,6 +116,7 @@ typedef struct {
 extern int ITERATION;
 extern int LAST_SEEN[N_INPUT];
 extern const Piece OPPOSITE[12];
+extern const Feature KING_BUCKETS[64];
 extern const Square PSQT64_TO_32[64];
 extern const Piece CHAR_TO_PIECE[];
 extern const float SS;
