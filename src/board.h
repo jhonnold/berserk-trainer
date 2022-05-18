@@ -11,7 +11,7 @@ INLINE Feature idx(Piece pc, Square sq, Square king, const Color view) {
   int oK = (7 * !(king & 4)) ^ (56 * view) ^ king;
   int oSq = (7 * !(king & 4)) ^ (56 * view) ^ sq;
 
-  return oP * 2 * 64 //
+  return oP * N_KING_BUCKETS * 64 //
     + KING_BUCKETS[oK] * 64 //
     + oSq;
 }

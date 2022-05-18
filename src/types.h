@@ -5,16 +5,18 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#define N_INPUT (12 * 2 * 64)
+#define N_KING_BUCKETS 8
+
+#define N_INPUT (12 * N_KING_BUCKETS * 64)
 #define N_HIDDEN 512
 #define N_L1 (2 * N_HIDDEN)
 #define N_OUTPUT 1
 
 #define THREADS 16
 
-// total fens in berserk9dev2.d9.bin - 2098790400
+// total fens in berserk9dev2.d9.bin - 3385786368 (34 iterations of 6078 * 16384)
 #define BATCH_SIZE 16384
-#define BATCHES_PER_LOAD 6100
+#define BATCHES_PER_LOAD 6078
 
 extern float ALPHA;
 #define BETA1 0.95
