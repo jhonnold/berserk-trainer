@@ -29,12 +29,13 @@ int main(int argc, char** argv) {
   char baseNetworkPath[128] = {0};
   char samplesPath[128] = {0};
   char validationsPath[128] = {0};
+  char runName[128] = {0};
 
   uint8_t writing = 0;
   char outputPath[128] = {0};
 
   int c;
-  while ((c = getopt(argc, argv, "c:v:z:w:d:n:")) != -1) {
+  while ((c = getopt(argc, argv, "c:v:z:w:d:n:r:")) != -1) {
     switch (c) {
       case 'd':
         strcpy(samplesPath, optarg);
@@ -54,6 +55,9 @@ int main(int argc, char** argv) {
       case 'w':
         strcpy(outputPath, optarg);
         writing = 1;
+        break;
+      case 'r':
+        strcpy(runName, optarg);
         break;
       case '?':
         return 1;
@@ -113,6 +117,7 @@ int main(int argc, char** argv) {
   int epoch = 0;
   while (++epoch <= 400) {
     long epochStart = GetTimeMS();
+    float te = 0.0;
 
     while (!DATA_LOADED)
       ;
@@ -125,6 +130,7 @@ int main(int argc, char** argv) {
       ITERATION++;
 
       float be = Train(b, data, nn, local, active);
+      te += be;
       ApplyGradients(nn, gradients, local, active);
 
       long now = GetTimeMS();
@@ -132,8 +138,8 @@ int main(int argc, char** argv) {
              1000.0 * (b + 1) * BATCH_SIZE / (now - epochStart));
     }
 
-    char buffer[64];
-    sprintf(buffer, "../nets/berserk-nnue.e%d.nn", epoch);
+    char buffer[256];
+    sprintf(buffer, "experiments/%s/nn-epoch%d.nnue", runName, epoch);
     SaveNN(nn, buffer);
 
     float newError = TotalError(validation, nn);
@@ -142,6 +148,14 @@ int main(int argc, char** argv) {
     printf("\rEpoch: [#%5d], Error: [%1.8f], Delta: [%+1.8f], LR: [%.8f], Time: [%lds], Speed: [%9.0f pos/s]\n", epoch,
            newError, error - newError, ALPHA, (now - epochStart) / 1000,
            1000.0 * BATCHES_PER_LOAD * BATCH_SIZE / (now - epochStart));
+
+
+    sprintf(buffer, "experiments/%s/loss.csv", runName);
+    FILE* flog = fopen(buffer, "a");
+    if (flog) {
+      fprintf(flog, "\"%d\",\"%.8f\",\"%.8f\"\n", epoch, newError, te / BATCHES_PER_LOAD);
+      fclose(flog);
+    }
 
     error = newError;
     if (epoch % STEP_RATE == 0)

@@ -12,9 +12,9 @@
 
 #define THREADS 16
 
-// total fens in berserk9dev2.d9.bin - 2098790400
+// total fens in berserk9dev2.d9.bin - 4,386,123,806
 #define BATCH_SIZE 16384
-#define BATCHES_PER_LOAD 6100
+#define BATCHES_PER_LOAD 6084
 
 extern float ALPHA;
 #define BETA1 0.95

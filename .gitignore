@@ -58,3 +58,12 @@ dist
 
 *.log
 *.nn
+*.nnue
+*.epd
+*.exe
+*.csv
+*.pgn
+*.png
+
+*ordo*
+*c-chess-cli*

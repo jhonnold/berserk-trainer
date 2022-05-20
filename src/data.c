@@ -35,7 +35,7 @@ void WriteToFile(char* dest, char* src, uint64_t entries) {
     fwrite(board, sizeof(Board), 1, fout);
 
     count++;
-    if (!(count % 10000000)) printf("\rWrote positions: [%10" PRId64 "]", count);
+    if (!(count % 1000000)) printf("\rWrote positions: [%10" PRId64 "]", count);
   }
 
   fclose(fp);

@@ -1,5 +1,5 @@
 CC = gcc
-SRC = *.c
+SRC = src/*.c
 EXE = trainer
 
 LIBS = -lm -lpthread
