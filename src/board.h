@@ -8,11 +8,9 @@ INLINE Piece Invert(Piece p) { return (p + 6) % 12; }
 
 INLINE Feature idx(Piece pc, Square sq, Square king, const Color view) {
   int oP = view == WHITE ? pc : Invert(pc);
-  int oK = (7 * !(king & 4)) ^ (56 * view) ^ king;
   int oSq = (7 * !(king & 4)) ^ (56 * view) ^ sq;
 
-  return oP * 2 * 64 //
-    + KING_BUCKETS[oK] * 64 //
+  return oP * 64 //
     + oSq;
 }
 

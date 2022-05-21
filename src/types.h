@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#define N_INPUT (12 * 2 * 64)
+#define N_INPUT (12 * 64)
 #define N_HIDDEN 512
 #define N_L1 (2 * N_HIDDEN)
 #define N_OUTPUT 1
