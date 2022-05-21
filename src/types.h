@@ -8,6 +8,7 @@
 #define N_INPUT (12 * 2 * 64)
 #define N_HIDDEN 512
 #define N_L1 (2 * N_HIDDEN)
+#define N_L2 8
 #define N_OUTPUT 1
 
 #define THREADS 16
@@ -82,7 +83,10 @@ typedef struct {
 
 typedef struct {
   float outputBias;
-  float outputWeights[N_L1] ALIGN64;
+  float outputWeights[N_L2] ALIGN64;
+
+  float l2Biases[N_L2] ALIGN64;
+  float l2Weights[N_L1 * N_L2] ALIGN64;
 
   float inputBiases[N_HIDDEN] ALIGN64;
   float inputWeights[N_INPUT * N_HIDDEN] ALIGN64;
@@ -90,6 +94,7 @@ typedef struct {
 
 typedef struct {
   float output;
+  float l2Acc[N_L2] ALIGN64;
   float accumulator[N_L1] ALIGN64;
 } ALIGN64 NetworkTrace;
 
@@ -99,18 +104,24 @@ typedef struct {
 
 typedef struct {
   Gradient outputBias;
-  Gradient outputWeights[N_L1];
+  Gradient outputWeights[N_L2] ALIGN64;
 
-  Gradient inputBiases[N_HIDDEN];
-  Gradient inputWeights[N_INPUT * N_HIDDEN];
+  Gradient l2Biases[N_L2] ALIGN64;
+  Gradient l2Weights[N_L1 * N_L2] ALIGN64;
+
+  Gradient inputBiases[N_HIDDEN] ALIGN64;
+  Gradient inputWeights[N_INPUT * N_HIDDEN] ALIGN64;
 } NNGradients;
 
 typedef struct {
   float outputBias;
-  float outputWeights[N_L1];
+  float outputWeights[N_L2] ALIGN64;
 
-  float inputBiases[N_HIDDEN];
-  float inputWeights[N_INPUT * N_HIDDEN];
+  float l2Biases[N_L2] ALIGN64;
+  float l2Weights[N_L1 * N_L2] ALIGN64;
+
+  float inputBiases[N_HIDDEN] ALIGN64;
+  float inputWeights[N_INPUT * N_HIDDEN] ALIGN64;
 } BatchGradients;
 
 extern int ITERATION;

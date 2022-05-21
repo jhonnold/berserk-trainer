@@ -217,14 +217,27 @@ float Train(int batch, DataSet* data, NN* nn, BatchGradients* local, uint8_t* ac
     // LOSS CALCULATIONS ------------------------------------------------------------------------
     float outputLoss = SigmoidPrime(out) * ErrorGradient(out, &board);
 
-    float hiddenLosses[N_L1];
+    float l2Losses[N_L2];
+    for (int i = 0; i < N_L2; i++)
+      l2Losses[i] = outputLoss * nn->outputWeights[i] * ReLUPrime(trace->l2Acc[i]);
+
+    float hiddenLosses[N_L1] = {0};
     for (int i = 0; i < N_L1; i++)
-      hiddenLosses[i] = outputLoss * nn->outputWeights[i] * ReLUPrime(trace->accumulator[i]);
+      for (int j = 0; j < N_L2; j++)
+        hiddenLosses[i] += l2Losses[j] * nn->l2Weights[j * N_L1 + i] * ReLUPrime(trace->accumulator[i]);
     // ------------------------------------------------------------------------------------------
 
     // OUTPUT LAYER GRADIENTS -------------------------------------------------------------------
     local[t].outputBias += outputLoss;
-    for (int i = 0; i < N_L1; i++) local[t].outputWeights[i] += trace->accumulator[i] * outputLoss;
+    for (int i = 0; i < N_L2; i++) local[t].outputWeights[i] += trace->l2Acc[i] * outputLoss;
+    // ------------------------------------------------------------------------------------------
+
+    // L2 LAYER GRADIENTS -------------------------------------------------------------------
+    for (int i = 0; i < N_L2; i++) local[t].l2Biases[i] += l2Losses[i];
+
+    for (int i = 0; i < N_L2; i++)
+      for (int j = 0; j < N_L1; j++)
+        local[t].l2Weights[i * N_L1 + j] += trace->accumulator[j] * l2Losses[i];
     // ------------------------------------------------------------------------------------------
 
     // INPUT LAYER GRADIENTS --------------------------------------------------------------------

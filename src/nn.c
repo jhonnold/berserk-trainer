@@ -33,7 +33,12 @@ void NNPredict(NN* nn, Features* f, Color stm, NetworkTrace* trace) {
 
   ReLU(trace->accumulator, N_L1);
 
-  trace->output += DotProduct(trace->accumulator, nn->outputWeights, N_L1);
+  memcpy(trace->l2Acc, nn->l2Biases, sizeof(float) * N_L2);
+  for (int i = 0; i < N_L2; i++)
+    trace->l2Acc[i] += DotProduct(trace->accumulator, &nn->l2Weights[N_L1 * i], N_L1);
+  ReLU(trace->l2Acc, N_L2);
+
+  trace->output += DotProduct(trace->l2Acc, nn->outputWeights, N_L2);
 }
 
 NN* LoadNN(char* path) {
@@ -51,15 +56,13 @@ NN* LoadNN(char* path) {
     exit(1);
   }
 
-  uint64_t hash;
-  fread(&hash, sizeof(uint64_t), 1, fp);
-  printf("Reading network with hash %llx\n", hash);
-
   NN* nn = AlignedMalloc(sizeof(NN));
 
   fread(nn->inputWeights, sizeof(float), N_INPUT * N_HIDDEN, fp);
   fread(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
-  fread(nn->outputWeights, sizeof(float), N_L1, fp);
+  fread(nn->l2Weights, sizeof(float), N_L1 * N_L2, fp);
+  fread(nn->l2Biases, sizeof(float), N_L2, fp);
+  fread(nn->outputWeights, sizeof(float), N_L2, fp);
   fread(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
 
   fclose(fp);
@@ -71,11 +74,15 @@ NN* LoadRandomNN() {
   srand(time(NULL));
   NN* nn = AlignedMalloc(sizeof(NN));
 
-  for (int i = 0; i < N_INPUT * N_HIDDEN; i++) nn->inputWeights[i] = RandomGaussian(0, sqrt(1.0 / 32));
+  for (int i = 0; i < N_INPUT * N_HIDDEN; i++) nn->inputWeights[i] = RandomGaussian(0, sqrt(2.0 / 32));
 
   for (int i = 0; i < N_HIDDEN; i++) nn->inputBiases[i] = 0;
 
-  for (int i = 0; i < N_L1; i++) nn->outputWeights[i] = RandomGaussian(0, sqrt(1.0 / N_HIDDEN));
+  for (int i = 0; i < N_L1 * N_L2; i++) nn->l2Weights[i] = RandomGaussian(0, sqrt(2.0 / N_L1));
+
+  for (int i = 0; i < N_L2; i++) nn->l2Biases[i] = 0;
+
+  for (int i = 0; i < N_L2; i++) nn->outputWeights[i] = RandomGaussian(0, sqrt(2.0 / N_L2));
 
   nn->outputBias = 0;
 
@@ -91,12 +98,11 @@ void SaveNN(NN* nn, char* path) {
 
   fwrite(&NETWORK_MAGIC, sizeof(int), 1, fp);
 
-  uint64_t hash = NetworkHash(nn);
-  fwrite(&hash, sizeof(uint64_t), 1, fp);
-
   fwrite(nn->inputWeights, sizeof(float), N_INPUT * N_HIDDEN, fp);
   fwrite(nn->inputBiases, sizeof(float), N_HIDDEN, fp);
-  fwrite(nn->outputWeights, sizeof(float), N_L1, fp);
+  fwrite(nn->l2Weights, sizeof(float), N_L1 * N_L2, fp);
+  fwrite(nn->l2Biases, sizeof(float), N_L2, fp);
+  fwrite(nn->outputWeights, sizeof(float), N_L2, fp);
   fwrite(&nn->outputBias, sizeof(float), N_OUTPUT, fp);
 
   fclose(fp);
