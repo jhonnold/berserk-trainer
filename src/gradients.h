@@ -53,7 +53,7 @@ void ApplyGradients(NN* nn, NNGradients* grads, BatchGradients* local, uint8_t* 
 
     UpdateAndApplyGradient(&nn->l2Weights[i], &grads->l2Weights[i], g);
 
-    nn->l2Weights[i] = fminf(127.0 / 32, fmaxf(-127.0 / 32, nn->l2Weights[i]));
+    nn->l2Weights[i] = fmaxf(fminf(nn->l2Weights[i], QUANT_IN / QUANT_W_H), -QUANT_IN / QUANT_W_H);
   }
 
   for (int i = 0; i < N_L2; i++) {

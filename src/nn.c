@@ -31,7 +31,7 @@ void NNPredict(NN* nn, Features* f, Color stm, NetworkTrace* trace) {
     }
   }
 
-  ReLU(trace->accumulator, N_L1);
+  CReLU(trace->accumulator, N_L1);
 
   memcpy(trace->l2Acc, nn->l2Biases, sizeof(float) * N_L2);
   for (int i = 0; i < N_L2; i++)
@@ -39,6 +39,7 @@ void NNPredict(NN* nn, Features* f, Color stm, NetworkTrace* trace) {
   ReLU(trace->l2Acc, N_L2);
 
   trace->output += DotProduct(trace->l2Acc, nn->outputWeights, N_L2);
+  trace->output *= OUTPUT_SCALAR;
 }
 
 NN* LoadNN(char* path) {
@@ -74,11 +75,11 @@ NN* LoadRandomNN() {
   srand(time(NULL));
   NN* nn = AlignedMalloc(sizeof(NN));
 
-  for (int i = 0; i < N_INPUT * N_HIDDEN; i++) nn->inputWeights[i] = RandomGaussian(0, sqrt(2.0 / 32));
+  for (int i = 0; i < N_INPUT * N_HIDDEN; i++) nn->inputWeights[i] = RandomGaussian(0, sqrt(2.0 / 32)) / OUTPUT_SCALAR;
 
   for (int i = 0; i < N_HIDDEN; i++) nn->inputBiases[i] = 0;
 
-  for (int i = 0; i < N_L1 * N_L2; i++) nn->l2Weights[i] = RandomGaussian(0, sqrt(2.0 / N_L1));
+  for (int i = 0; i < N_L1 * N_L2; i++) nn->l2Weights[i] = RandomGaussian(0, sqrt(2.0 / N_L1)) / OUTPUT_SCALAR;
 
   for (int i = 0; i < N_L2; i++) nn->l2Biases[i] = 0;
 

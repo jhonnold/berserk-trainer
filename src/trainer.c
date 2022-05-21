@@ -1,10 +1,10 @@
 #include "trainer.h"
 
 #include <math.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <pthread.h>
 
 #include "bits.h"
 #include "board.h"
@@ -157,7 +157,6 @@ int main(int argc, char** argv) {
            newError, error - newError, ALPHA, (now - epochStart) / 1000,
            1000.0 * BATCHES_PER_LOAD * BATCH_SIZE / (now - epochStart));
 
-
     sprintf(buffer, "experiments/%s/loss.csv", runName);
     FILE* flog = fopen(buffer, "a");
     if (flog) {
@@ -166,8 +165,7 @@ int main(int argc, char** argv) {
     }
 
     error = newError;
-    if (epoch % STEP_RATE == 0)
-      ALPHA *= GAMMA;
+    if (epoch % STEP_RATE == 0) ALPHA *= GAMMA;
   }
 
   COMPLETE = 1;
@@ -215,16 +213,15 @@ float Train(int batch, DataSet* data, NN* nn, BatchGradients* local, uint8_t* ac
     e += Error(out, &board);
 
     // LOSS CALCULATIONS ------------------------------------------------------------------------
-    float outputLoss = SigmoidPrime(out) * ErrorGradient(out, &board);
+    float outputLoss = OUTPUT_SCALAR * SigmoidPrime(out) * ErrorGradient(out, &board);
 
     float l2Losses[N_L2];
-    for (int i = 0; i < N_L2; i++)
-      l2Losses[i] = outputLoss * nn->outputWeights[i] * ReLUPrime(trace->l2Acc[i]);
+    for (int i = 0; i < N_L2; i++) l2Losses[i] = outputLoss * nn->outputWeights[i] * ReLUPrime(trace->l2Acc[i]);
 
     float hiddenLosses[N_L1] = {0};
     for (int i = 0; i < N_L1; i++)
       for (int j = 0; j < N_L2; j++)
-        hiddenLosses[i] += l2Losses[j] * nn->l2Weights[j * N_L1 + i] * ReLUPrime(trace->accumulator[i]);
+        hiddenLosses[i] += l2Losses[j] * nn->l2Weights[j * N_L1 + i] * CReLUPrime(trace->accumulator[i]);
     // ------------------------------------------------------------------------------------------
 
     // OUTPUT LAYER GRADIENTS -------------------------------------------------------------------
@@ -236,22 +233,15 @@ float Train(int batch, DataSet* data, NN* nn, BatchGradients* local, uint8_t* ac
     for (int i = 0; i < N_L2; i++) local[t].l2Biases[i] += l2Losses[i];
 
     for (int i = 0; i < N_L2; i++)
-      for (int j = 0; j < N_L1; j++)
-        local[t].l2Weights[i * N_L1 + j] += trace->accumulator[j] * l2Losses[i];
+      for (int j = 0; j < N_L1; j++) local[t].l2Weights[i * N_L1 + j] += trace->accumulator[j] * l2Losses[i];
     // ------------------------------------------------------------------------------------------
 
     // INPUT LAYER GRADIENTS --------------------------------------------------------------------
-    float lassos[N_L1];
-    for (int i = 0; i < N_L1; i++) lassos[i] = LAMBDA * (trace->accumulator[i] > 0);
-
     float* stmLosses = hiddenLosses;
     float* xstmLosses = &hiddenLosses[N_HIDDEN];
 
-    float* stmLassos = lassos;
-    float* xstmLassos = &lassos[N_HIDDEN];
-
     for (int i = 0; i < N_HIDDEN; i++)
-      local[t].inputBiases[i] += stmLosses[i] + xstmLosses[i] + stmLassos[i] + xstmLassos[i];
+      local[t].inputBiases[i] += stmLosses[i] + xstmLosses[i];
 
     for (int i = 0; i < f->n; i++) {
       int f1 = f->features[i][board.stm];
@@ -260,8 +250,8 @@ float Train(int batch, DataSet* data, NN* nn, BatchGradients* local, uint8_t* ac
       actives[t][f1] = actives[t][f2] = 1;
 
       for (int j = 0; j < N_HIDDEN; j++) {
-        local[t].inputWeights[f1 * N_HIDDEN + j] += stmLosses[j] + stmLassos[j];
-        local[t].inputWeights[f2 * N_HIDDEN + j] += xstmLosses[j] + xstmLassos[j];
+        local[t].inputWeights[f1 * N_HIDDEN + j] += stmLosses[j];
+        local[t].inputWeights[f2 * N_HIDDEN + j] += xstmLosses[j];
       }
     }
     // ------------------------------------------------------------------------------------------
