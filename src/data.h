@@ -9,5 +9,6 @@ void LoadEntries(char* path, DataSet* data, uint32_t n, uint32_t offset);
 void LoadDataEntry(char* buffer, Board* result);
 void ShuffleData(DataSet* data);
 void* CyclicalLoader(void* args);
+void ShuffleBinpack(uint64_t n, char* in, char* out);
 
 #endif

@@ -19,7 +19,9 @@ def find_networks(root_dir):
     for path, _, files in os.walk(root_dir, followlinks=False):
         for filename in files:
             if p.match(filename):
-                networks.append(os.path.join(path, filename))
+                epoch_num = re.search(r'epoch(\d+)', filename)
+                if int(epoch_num.group(1)) % 5 == 0:
+                    networks.append(os.path.join(path, filename))
 
     return networks
 

@@ -31,11 +31,11 @@ int main(int argc, char** argv) {
   char validationsPath[128] = {0};
   char runName[128] = {0};
 
-  uint8_t writing = 0;
+  uint8_t writing = 0, shuffling = 0;
   char outputPath[128] = {0};
 
   int c;
-  while ((c = getopt(argc, argv, "c:v:z:w:d:n:r:")) != -1) {
+  while ((c = getopt(argc, argv, "sc:v:z:w:d:n:r:")) != -1) {
     switch (c) {
       case 'd':
         strcpy(samplesPath, optarg);
@@ -56,6 +56,9 @@ int main(int argc, char** argv) {
         strcpy(outputPath, optarg);
         writing = 1;
         break;
+      case 's':
+        shuffling = 1;
+        break;
       case 'r':
         strcpy(runName, optarg);
         break;
@@ -67,6 +70,11 @@ int main(int argc, char** argv) {
   if (!samplesPath[0]) {
     printf("No data file specified!\n");
     return 1;
+  }
+
+  if (shuffling && writing) {
+    ShuffleBinpack(entries, samplesPath, outputPath);
+    exit(0);
   }
 
   if (writing) {
