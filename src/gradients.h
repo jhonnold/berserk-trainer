@@ -23,18 +23,13 @@ void UpdateAndApplyGradient(float* v, Gradient* grad, float g) {
 void ApplyGradients(NN* nn, NNGradients* grads, BatchGradients* local, uint8_t* active) {
 #pragma omp parallel for schedule(static) num_threads(THREADS)
   for (int i = 0; i < N_INPUT; i++) {
-    if (!active[i]) continue;
-
-    int age = ITERATION - LAST_SEEN[i];
-    LAST_SEEN[i] = ITERATION;
-
     for (int j = 0; j < N_HIDDEN; j++) {
       int idx = i * N_HIDDEN + j;
 
       float g = 0.0;
       for (int t = 0; t < THREADS; t++) g += local[t].inputWeights[idx];
 
-      UpdateAndApplyGradientWithAge(&nn->inputWeights[idx], &grads->inputWeights[idx], g, age);
+      UpdateAndApplyGradient(&nn->inputWeights[idx], &grads->inputWeights[idx], g);
     }
   }
 

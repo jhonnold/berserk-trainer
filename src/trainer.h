@@ -8,13 +8,15 @@ float TotalError(DataSet* data, NN* nn);
 float Train(int batch, DataSet* data, NN* nn, BatchGradients* local, uint8_t* active);
 
 INLINE float Error(float r, Board* b) {
-  return WDL * powf(fabs(r - b->wdl / 2.0), 2.5) +  //
-         EVAL * powf(fabs(r - b->eval), 2.5);
+  float target = WDL * b->wdl / 2.0 + EVAL * b->eval;
+
+  return powf(fabs(r - target), 2.5);
 }
 
 INLINE float ErrorGradient(float r, Board* b) {
-  return WDL * 2.5 * (r - b->wdl / 2.0) * sqrtf(fabs(r - b->wdl / 2.0)) +  //
-         EVAL * 2.5 * (r - b->eval) * sqrtf(fabs(r - b->eval));
+  float target = WDL * b->wdl / 2.0 + EVAL * b->eval;
+
+  return 2.5 * (r - target) * sqrtf(fabs(r - target));
 }
 
 #endif

@@ -17,11 +17,11 @@
 #define BATCHES_PER_LOAD 6100
 
 extern float ALPHA;
-#define BETA1 0.95
+#define BETA1 0.9
 #define BETA2 0.999
 #define EPSILON 1e-8
 
-#define STEP_RATE 100
+#define STEP_RATE 105
 #define GAMMA 0.1f
 
 #define WDL 0.5

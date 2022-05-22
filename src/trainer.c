@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
   pthread_detach(loadingThread);
 
   int epoch = 0;
-  while (++epoch <= 400) {
+  while (++epoch <= 420) {
     long epochStart = GetTimeMS();
     float te = 0.0;
 
@@ -196,7 +196,6 @@ float Train(int batch, DataSet* data, NN* nn, BatchGradients* local, uint8_t* ac
 #pragma omp parallel for schedule(static) num_threads(THREADS)
   for (int t = 0; t < THREADS; t++) memset(&local[t], 0, sizeof(BatchGradients));
 
-  uint8_t actives[THREADS][N_INPUT] = {0};
   float e = 0.0;
 
 #pragma omp parallel for schedule(static) num_threads(THREADS) reduction(+ : e)
@@ -228,34 +227,23 @@ float Train(int batch, DataSet* data, NN* nn, BatchGradients* local, uint8_t* ac
     // ------------------------------------------------------------------------------------------
 
     // INPUT LAYER GRADIENTS --------------------------------------------------------------------
-    float lassos[N_L1];
-    for (int i = 0; i < N_L1; i++) lassos[i] = LAMBDA * (trace->accumulator[i] > 0);
-
     float* stmLosses = hiddenLosses;
     float* xstmLosses = &hiddenLosses[N_HIDDEN];
 
-    float* stmLassos = lassos;
-    float* xstmLassos = &lassos[N_HIDDEN];
-
     for (int i = 0; i < N_HIDDEN; i++)
-      local[t].inputBiases[i] += stmLosses[i] + xstmLosses[i] + stmLassos[i] + xstmLassos[i];
+      local[t].inputBiases[i] += stmLosses[i] + xstmLosses[i];
 
     for (int i = 0; i < f->n; i++) {
       int f1 = f->features[i][board.stm];
       int f2 = f->features[i][board.stm ^ 1];
 
-      actives[t][f1] = actives[t][f2] = 1;
-
       for (int j = 0; j < N_HIDDEN; j++) {
-        local[t].inputWeights[f1 * N_HIDDEN + j] += stmLosses[j] + stmLassos[j];
-        local[t].inputWeights[f2 * N_HIDDEN + j] += xstmLosses[j] + xstmLassos[j];
+        local[t].inputWeights[f1 * N_HIDDEN + j] += stmLosses[j];
+        local[t].inputWeights[f2 * N_HIDDEN + j] += xstmLosses[j];
       }
     }
     // ------------------------------------------------------------------------------------------
   }
-
-  for (int t = 0; t < THREADS; t++)
-    for (int i = 0; i < N_INPUT; i++) active[i] |= actives[t][i];
 
   return e / BATCH_SIZE;
 }
